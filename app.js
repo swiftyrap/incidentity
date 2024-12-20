@@ -1,127 +1,128 @@
-// Initialize the map and set a default view (centered on New York City)
-const map = L.map('map').setView([40.7128, -74.0060], 13);
+// Initialize the map without a default view
+const map = L.map('map');
 
-// Add OpenStreetMap tiles to the map
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+// Add OpenStreetMap default tiles
+const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '© OpenStreetMap'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
-// Initialize MarkerCluster Group with custom options
-const markersCluster = L.markerClusterGroup({
-    maxClusterRadius: 50,           // Distance within which points are clustered (in pixels)
-    spiderfyOnMaxZoom: true,        // Show individual markers when zoomed in
-    showCoverageOnHover: false,     // Disable the highlight of the cluster area when hovered
-    zoomToBoundsOnClick: true       // Zoom to cluster bounds when clicking on a cluster
-});
+// Center the map on the user's current location when the site loads
+map.locate({ setView: true, maxZoom: 16 });
 
-// Add the cluster group to the map
+// Initialize MarkerCluster Group
+const markersCluster = L.markerClusterGroup();
 map.addLayer(markersCluster);
 
-// Array to store markers with type information
+// Array to store markers and their data
 const markers = [];
+let clickedLocation = null;
+let tempMarker = null;
 
-// Variable to store the clicked marker location
-let clickedMarker = null;
+// Custom icons for different markers
+const tempIcon = L.divIcon({
+    className: 'temp-marker-icon',
+    html: "<div style='background-color: blue; width: 20px; height: 20px; border-radius: 50%;'></div>"
+});
 
-// Handle form submission to add markers with incident details
-const form = document.getElementById('incident-form');
-form.addEventListener('submit', function (e) {
+const incidentIcon = L.divIcon({
+    className: 'incident-marker-icon',
+    html: "<div style='background-color: red; width: 20px; height: 20px; border-radius: 50%;'></div>"
+});
+
+// Chart.js instance
+let incidentChart;
+
+// Function to add a submitted incident marker
+function addMarker(latlng, type, description) {
+    const marker = L.marker(latlng, { icon: incidentIcon });
+    marker.bindPopup(`<b>Type:</b> ${type}<br><b>Description:</b> ${description}`);
+    markersCluster.addLayer(marker);
+    markers.push({ latlng, type, description });
+    updateDashboard();
+}
+
+// Handle form submission
+document.getElementById('incident-form').addEventListener('submit', function (e) {
     e.preventDefault();
-
     const description = document.getElementById('description').value;
     const type = document.getElementById('type').value;
 
-    if (clickedMarker) {
-        // Customize marker color based on incident type
-        const icon = getCustomIcon(type);
-        clickedMarker.setIcon(icon);
-
-        // Bind popup with the description and type to the marker
-        clickedMarker.bindPopup(`<b>Type:</b> ${type}<br><b>Description:</b> ${description}`).openPopup();
-
-        // Add the marker to the cluster group and the markers array
-        markersCluster.addLayer(clickedMarker);
-        markers.push({ marker: clickedMarker, type });
-
-        // Reset the clicked marker
-        clickedMarker = null;
+    if (clickedLocation) {
+        addMarker(clickedLocation, type, description);
+        map.removeLayer(tempMarker); // Remove the temporary marker after submission
+        clickedLocation = null;
+        tempMarker = null;
     } else {
-        alert("Please click on the map to set the incident location.");
+        alert("Please click on the map to select a location for the incident.");
     }
 
-    // Clear the form input fields
-    form.reset();
+    e.target.reset();
 });
 
 // Allow users to click on the map to set the incident location
 map.on('click', function (e) {
-    if (clickedMarker) {
-        // Remove the previous marker if it exists
-        map.removeLayer(clickedMarker);
+    if (tempMarker) {
+        map.removeLayer(tempMarker); // Remove the previous temporary marker
     }
-
-    // Add a new marker at the clicked location with a custom color for selection
-    clickedMarker = L.marker(e.latlng, { icon: getCustomIcon('selected') }).addTo(map).bindPopup("Selected Location").openPopup();
+    clickedLocation = e.latlng;
+    tempMarker = L.marker(e.latlng, { icon: tempIcon }).addTo(map).bindPopup("Location selected").openPopup();
 });
 
-// Filter incidents based on type
-const filterSelect = document.getElementById('filter-type');
-filterSelect.addEventListener('change', function () {
-    const selectedType = filterSelect.value;
+// Update the dashboard with incident statistics
+function updateDashboard() {
+    const totalIncidents = markers.length;
+    const typeCounts = { traffic: 0, crime: 0, hazard: 0 };
 
-    // Clear the current cluster group
-    markersCluster.clearLayers();
-
-    // Re-add markers that match the selected type
-    markers.forEach(({ marker, type }) => {
-        if (selectedType === 'all' || type === selectedType) {
-            markersCluster.addLayer(marker);
+    markers.forEach(({ type }) => {
+        if (typeCounts[type] !== undefined) {
+            typeCounts[type]++;
         }
     });
-});
 
-// Detect user location and center the map
-const locateButton = document.getElementById('locate-button');
-locateButton.addEventListener('click', function () {
-    map.locate({ setView: true, maxZoom: 16 });
-});
+    document.getElementById('total-incidents').innerText = totalIncidents;
+    document.getElementById('traffic-count').innerText = typeCounts['traffic'];
+    document.getElementById('crime-count').innerText = typeCounts['crime'];
+    document.getElementById('hazard-count').innerText = typeCounts['hazard'];
 
-// Handle successful location detection
-map.on('locationfound', function (e) {
-    L.marker(e.latlng, { icon: getCustomIcon('user') }).addTo(map).bindPopup("You are here!").openPopup();
-});
-
-// Handle location detection errors
-map.on('locationerror', function () {
-    alert("Unable to access your location. Please ensure location services are enabled.");
-});
-
-// Function to create custom icons based on type
-function getCustomIcon(type) {
-    let color;
-    switch (type) {
-        case 'traffic':
-            color = 'blue';
-            break;
-        case 'crime':
-            color = 'red';
-            break;
-        case 'hazard':
-            color = 'orange';
-            break;
-        case 'user':
-            color = 'green';
-            break;
-        case 'selected':
-            color = 'purple';
-            break;
-        default:
-            color = 'gray';
+    // Update Chart
+    if (incidentChart) {
+        incidentChart.destroy();
     }
 
-    return L.divIcon({
-        className: `custom-marker-${color}`,
-        html: `<div style='background-color: ${color}; width: 16px; height: 16px; border-radius: 50%;'></div>`
+    const ctx = document.getElementById('incidentChart').getContext('2d');
+    incidentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Traffic', 'Crime', 'Hazard'],
+            datasets: [{
+                label: 'Incident Count',
+                data: [typeCounts['traffic'], typeCounts['crime'], typeCounts['hazard']],
+                backgroundColor: ['#007bff', '#dc3545', '#ffc107']
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
     });
 }
+
+// Search for a location
+document.getElementById('search-button').addEventListener('click', function () {
+    const query = document.getElementById('search-input').value;
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                const { lat, lon } = data[0];
+                map.setView([lat, lon], 14);
+            } else {
+                alert("Location not found. Please try again.");
+            }
+        });
+});

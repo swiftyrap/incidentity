@@ -16,16 +16,23 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
     <link rel="stylesheet" href="style.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container my-4">
         <h1 class="text-center mb-4">Incident Reporting Map</h1>
-        
+
         <div class="row">
             <div class="col-md-8">
                 <div id="map"></div>
+                <div class="mt-3">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search for an area..." />
+                    <button id="search-button" class="btn btn-primary w-100 mt-2">Search</button>
+                </div>
             </div>
-            
+
             <div class="col-md-4">
                 <form id="incident-form" class="p-3 bg-light rounded shadow">
                     <h4 class="mb-3">Report an Incident</h4>
@@ -45,17 +52,26 @@
                     </div>
                     
                     <button type="submit" class="btn btn-success w-100">Submit Incident</button>
-                    <button id="locate-button" type="button" class="btn btn-primary w-100 mt-2">📍 Detect My Location</button>
+                    <button id="locate-button" type="button" class="btn btn-primary w-100 mt-2">?? Detect My Location</button>
                 </form>
+            </div>
+        </div>
 
-                <div class="mt-3">
-                    <h5>Filter Incidents</h5>
-                    <select id="filter-type" class="form-select">
-                        <option value="all">All Incidents</option>
-                        <option value="traffic">Traffic</option>
-                        <option value="crime">Crime</option>
-                        <option value="hazard">Hazard</option>
-                    </select>
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h3>Incident Dashboard</h3>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card p-3">
+                            <h5>Total Incidents: <span id="total-incidents">0</span></h5>
+                            <h6>Traffic Incidents: <span id="traffic-count">0</span></h6>
+                            <h6>Crime Incidents: <span id="crime-count">0</span></h6>
+                            <h6>Hazard Incidents: <span id="hazard-count">0</span></h6>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <canvas id="incidentChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
