@@ -20,12 +20,29 @@ const markersCluster = L.markerClusterGroup({
 });
 map.addLayer(markersCluster);
 
-// Locate user's current position
-map.locate({ setView: true, maxZoom: 16 });
+// Real-time user location tracking
+let userMarker = null;
+let userCircle = null;
 
-// Handle location found
+// Enable continuous tracking of the user's location
+map.locate({ setView: true, maxZoom: 16, watch: true, enableHighAccuracy: true });
+
+// Handle location updates
 map.on('locationfound', (e) => {
-    L.marker(e.latlng).addTo(map).bindPopup("You are here").openPopup();
+    const { lat, lng, accuracy } = e;
+
+    if (userMarker) {
+        userMarker.setLatLng([lat, lng]);
+        userCircle.setLatLng([lat, lng]);
+        userCircle.setRadius(accuracy);
+    } else {
+        userMarker = L.marker([lat, lng], { icon: L.icon({ iconUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png' }) });
+        userCircle = L.circle([lat, lng], { radius: accuracy, color: 'blue', fillColor: 'blue', fillOpacity: 0.2 });
+
+        userMarker.addTo(map).bindPopup("You are here");
+        userCircle.addTo(map);
+    }
+    map.setView([lat, lng], map.getZoom());
 });
 
 // Handle location error
@@ -52,21 +69,18 @@ document.getElementById('report-button').addEventListener('click', async () => {
         return;
     }
 
-    // Open the camera for photo capture
     const photoFile = await capturePhoto();
     if (!photoFile) {
         alert("Photo capture failed.");
         return;
     }
 
-    // Show modal for issue type selection
     const formModal = new bootstrap.Modal(document.getElementById('formModal'));
     formModal.show();
 
     document.getElementById('form-submit').onclick = () => {
         const issueType = document.getElementById('issue-type').value;
 
-        // Add marker with photo and issue type
         const marker = L.marker(clickedLocation).addTo(markersCluster);
         const photoURL = URL.createObjectURL(photoFile);
         marker.bindPopup(`
