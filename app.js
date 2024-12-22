@@ -7,8 +7,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-// Real-time user tracking
+// Initialize the marker cluster group
+const markerClusterGroup = L.markerClusterGroup();
+map.addLayer(markerClusterGroup);
+
+// Real-time user tracking with a blue-white dot
 let userMarker = null;
+
 navigator.geolocation.watchPosition(
     (position) => {
         const { latitude, longitude } = position.coords;
@@ -16,7 +21,13 @@ navigator.geolocation.watchPosition(
         if (userMarker) {
             userMarker.setLatLng([latitude, longitude]);
         } else {
-            userMarker = L.marker([latitude, longitude]).addTo(map).bindPopup("You are here").openPopup();
+            // Add blue-white dot for live location
+            userMarker = L.circleMarker([latitude, longitude], {
+                radius: 8,
+                color: 'blue',
+                fillColor: 'white',
+                fillOpacity: 1,
+            }).addTo(map);
             map.setView([latitude, longitude], 16);
         }
     },
@@ -27,22 +38,9 @@ navigator.geolocation.watchPosition(
 );
 
 // Handle reporting incidents
-let clickedLocation = null;
-let tempMarker = null;
-
-// Allow map clicks to select incident location
-map.on('click', (e) => {
-    if (tempMarker) {
-        map.removeLayer(tempMarker);
-    }
-    clickedLocation = e.latlng;
-    tempMarker = L.marker(e.latlng).addTo(map).bindPopup("Selected location").openPopup();
-});
-
-// Handle the "Report" button
 document.getElementById('report-button').addEventListener('click', async () => {
-    if (!clickedLocation) {
-        alert("Please click on the map to select a location for the incident.");
+    if (!userMarker) {
+        alert("Unable to determine your location. Please try again.");
         return;
     }
 
@@ -58,18 +56,18 @@ document.getElementById('report-button').addEventListener('click', async () => {
     document.getElementById('form-submit').onclick = () => {
         const issueType = document.getElementById('issue-type').value;
 
-        // Add marker with photo and issue type
-        const marker = L.marker(clickedLocation).addTo(map);
+        // Add a new marker for each report to the marker cluster group
+        const marker = L.marker(userMarker.getLatLng());
         const photoURL = URL.createObjectURL(photoFile);
         marker.bindPopup(`
             <b>Issue Type:</b> ${issueType}<br>
             <img src="${photoURL}" alt="Incident Photo" style="width:100%; height:auto; border-radius:8px; margin-top:10px;">
-        `).openPopup();
+        `);
+
+        markerClusterGroup.addLayer(marker); // Add marker to the cluster group
+        marker.openPopup();
 
         formModal.hide();
-        map.removeLayer(tempMarker);
-        tempMarker = null;
-        clickedLocation = null;
     };
 });
 
