@@ -10,13 +10,11 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Create a marker with rotation support
 const userMarker = L.marker([0, 0], {
     icon: L.divIcon({
-        html: `<div style="transform: rotate(0deg); width: 24px; height: 24px; background-color: blue; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
-                <div style="width: 16px; height: 16px; background-color: white; border-radius: 50%;"></div>
+        html: `<div style="transform: rotate(0deg); width: 30px; height: 30px; background-color: blue; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
+                <div style="width: 10px; height: 20px; background-color: white; clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
                </div>`,
         className: '',
     }),
-    rotationAngle: 0, // Custom property to track rotation
-    rotationOrigin: 'center center',
 }).addTo(map);
 
 // Function to update marker position
@@ -26,8 +24,8 @@ function updateMarkerPosition(lat, lng) {
 
 // Function to update marker rotation
 function updateMarkerRotation(angle) {
-    userMarker.options.icon.options.html = `<div style="transform: rotate(${angle}deg); width: 24px; height: 24px; background-color: blue; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
-        <div style="width: 16px; height: 16px; background-color: white; border-radius: 50%;"></div>
+    userMarker.options.icon.options.html = `<div style="transform: rotate(${angle}deg); width: 30px; height: 30px; background-color: blue; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
+        <div style="width: 10px; height: 20px; background-color: white; clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
     </div>`;
     userMarker.setIcon(userMarker.options.icon);
 }
