@@ -47,14 +47,45 @@ if (navigator.geolocation) {
     alert("Geolocation is not supported by your browser.");
 }
 
-// Track device orientation
-if (window.DeviceOrientationEvent) {
-    window.addEventListener('deviceorientation', (event) => {
-        if (event.alpha !== null) {
-            const rotationAngle = 360 - event.alpha; // Calculate rotation angle
-            updateMarkerRotation(rotationAngle);
-        }
+// Handle orientation with permission (for iOS)
+if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iOS-specific permission prompt
+    const requestPermissionButton = document.createElement('button');
+    requestPermissionButton.textContent = 'Enable Compass';
+    requestPermissionButton.style.position = 'absolute';
+    requestPermissionButton.style.top = '10px';
+    requestPermissionButton.style.left = '10px';
+    requestPermissionButton.style.zIndex = '1000';
+    requestPermissionButton.style.padding = '10px 20px';
+    requestPermissionButton.style.backgroundColor = '#007bff';
+    requestPermissionButton.style.color = 'white';
+    requestPermissionButton.style.border = 'none';
+    requestPermissionButton.style.borderRadius = '5px';
+    requestPermissionButton.style.cursor = 'pointer';
+
+    document.body.appendChild(requestPermissionButton);
+
+    requestPermissionButton.addEventListener('click', () => {
+        DeviceOrientationEvent.requestPermission()
+            .then((permissionState) => {
+                if (permissionState === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    document.body.removeChild(requestPermissionButton);
+                } else {
+                    alert("Permission to access orientation was denied.");
+                }
+            })
+            .catch(console.error);
     });
 } else {
-    alert("Device orientation is not supported by your browser.");
+    // Non-iOS devices
+    window.addEventListener('deviceorientation', handleOrientation);
+}
+
+// Handle orientation changes
+function handleOrientation(event) {
+    if (event.alpha !== null) {
+        const rotationAngle = 360 - event.alpha; // Calculate rotation angle
+        updateMarkerRotation(rotationAngle);
+    }
 }
