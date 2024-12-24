@@ -1,19 +1,16 @@
-// Initialize the map
-const map = L.map('map').setView([0, 0], 16);
+const map = L.map('map').setView([51.505, -0.09], 13);
 
-// Add OpenStreetMap tiles
+// Add map tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: '&copy; OpenStreetMap contributors',
 }).addTo(map);
 
-// Initialize the marker cluster group
 const markerClusterGroup = L.markerClusterGroup();
 map.addLayer(markerClusterGroup);
 
-// Real-time user tracking with a blue-white dot
 let userMarker = null;
 
+// Track User Location
 navigator.geolocation.watchPosition(
     (position) => {
         const { latitude, longitude } = position.coords;
@@ -21,70 +18,101 @@ navigator.geolocation.watchPosition(
         if (userMarker) {
             userMarker.setLatLng([latitude, longitude]);
         } else {
-            // Add blue-white dot for live location
             userMarker = L.circleMarker([latitude, longitude], {
                 radius: 8,
                 color: 'blue',
                 fillColor: 'white',
                 fillOpacity: 1,
             }).addTo(map);
-            map.setView([latitude, longitude], 16);
         }
+
+        map.setView([latitude, longitude], 13);
     },
     (error) => {
-        alert(`Geolocation error: ${error.message}`);
+        console.error(error);
     },
     { enableHighAccuracy: true }
 );
 
-// Handle reporting incidents
-document.getElementById('report-button').addEventListener('click', async () => {
-    if (!userMarker) {
-        alert("Unable to determine your location. Please try again.");
-        return;
-    }
-
-    const photoFile = await capturePhoto();
-    if (!photoFile) {
-        alert("Photo capture failed or was canceled.");
-        return;
-    }
-
+// Report Incident
+document.getElementById('report-button').addEventListener('click', () => {
     const formModal = new bootstrap.Modal(document.getElementById('formModal'));
     formModal.show();
 
     document.getElementById('form-submit').onclick = () => {
         const issueType = document.getElementById('issue-type').value;
+        const photoFile = document.getElementById('photo-upload').files[0];
+        const marker = L.marker(map.getCenter());
 
-        // Add a new marker for each report to the marker cluster group
-        const marker = L.marker(userMarker.getLatLng());
-        const photoURL = URL.createObjectURL(photoFile);
-        marker.bindPopup(`
-            <b>Issue Type:</b> ${issueType}<br>
-            <img src="${photoURL}" alt="Incident Photo" style="width:100%; height:auto; border-radius:8px; margin-top:10px;">
-        `);
+        let popupContent = `<b>Issue Type:</b> ${issueType}`;
+        if (photoFile) {
+            const photoURL = URL.createObjectURL(photoFile);
+            popupContent += `<br><img src="${photoURL}" alt="Incident Photo" style="width:100%; margin-top:10px;">`;
+        }
 
-        markerClusterGroup.addLayer(marker); // Add marker to the cluster group
-        marker.openPopup();
+        popupContent += `
+            <br><button class="btn btn-success mt-2" onclick="shareOnWhatsApp('${issueType}')">Share on WhatsApp</button>
+            <br><button class="btn btn-secondary mt-2" onclick="copyIncidentLink('${issueType}')">Copy Link</button>
+        `;
 
+        marker.bindPopup(popupContent).addTo(markerClusterGroup);
         formModal.hide();
     };
 });
 
-// Function to capture a photo
-async function capturePhoto() {
-    return new Promise((resolve, reject) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.capture = 'camera';
+// WhatsApp Sharing Function
+function shareOnWhatsApp(issueType) {
+    const link = `https://wa.me/?text=Incident reported: ${issueType}`;
+    window.open(link, '_blank');
+}
 
-        input.onchange = (event) => {
-            const file = event.target.files[0];
-            if (file) resolve(file);
-            else reject();
-        };
-
-        input.click();
+// Copy Incident Link Function
+function copyIncidentLink(issueType) {
+    const link = `Incident Reported: ${issueType}`;
+    navigator.clipboard.writeText(link).then(() => {
+        alert('Incident link copied!');
     });
 }
+
+// Tab Switching
+document.getElementById('map-tab').addEventListener('click', () => {
+    document.getElementById('map-container').style.display = 'block';
+    document.getElementById('stats-container').style.display = 'none';
+    document.getElementById('map-tab').classList.add('active');
+    document.getElementById('stats-tab').classList.remove('active');
+});
+
+document.getElementById('stats-tab').addEventListener('click', () => {
+    document.getElementById('map-container').style.display = 'none';
+    document.getElementById('stats-container').style.display = 'block';
+    document.getElementById('stats-tab').classList.add('active');
+    document.getElementById('map-tab').classList.remove('active');
+});
+
+// Populate Statistics
+function loadStatistics() {
+    const ctx = document.getElementById('incident-bar-chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Brick Fall', 'Rubbish on Road', 'Water Leakage', 'Road Damage'],
+            datasets: [{
+                label: 'Number of Incidents',
+                data: [12, 8, 5, 15],
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+document.getElementById('stats-tab').addEventListener('click', loadStatistics);

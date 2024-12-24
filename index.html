@@ -3,28 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Location Reporting with Clustering</title>
-    
+    <title>Incident Reporting</title>
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet MarkerCluster CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-
-    <!-- Bootstrap CSS for Modal -->
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1>Live Location Reporting with Clustering</h1>
+        <nav>
+            <button id="map-tab" class="nav-tab active">Map</button>
+            <button id="stats-tab" class="nav-tab">Statistics</button>
+        </nav>
     </header>
+
+    <!-- Map Section -->
     <div id="map-container">
         <div id="map"></div>
         <div id="buttons">
-            <button id="report-button" class="btn">Report</button>
+            <button id="report-button" class="btn btn-primary">Report Incident</button>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div id="stats-container" style="display: none;">
+        <div id="charts">
+            <canvas id="incident-bar-chart"></canvas>
         </div>
     </div>
 
@@ -33,16 +42,24 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="formModalLabel">Submit Incident</h5>
+                    <h5 class="modal-title" id="formModalLabel">Report Incident</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <label for="issue-type" class="form-label">Choose Issue Type:</label>
+                    <label for="issue-type" class="form-label">Choose Incident Type:</label>
                     <select id="issue-type" class="form-select">
-                        <option value="Traffic">Traffic</option>
-                        <option value="Crime">Crime</option>
-                        <option value="Hazard">Hazard</option>
+                        <option value="Brick Fall">Brick Fall</option>
+                        <option value="Rubbish on Road">Rubbish on Road</option>
+                        <option value="Water Leakage">Water Leakage</option>
+                        <option value="Road Damage">Road Damage</option>
+                        <option value="Streetlight Issue">Streetlight Issue</option>
+                        <option value="Illegal Dumping">Illegal Dumping</option>
+                        <option value="Tree Blocking Road">Tree Blocking Road</option>
+                        <option value="Pothole">Pothole</option>
+                        <option value="Blocked Drain">Blocked Drain</option>
+                        <option value="Others">Others</option>
                     </select>
+                    <input type="file" id="photo-upload" class="form-control mt-3" accept="image/*" capture="camera">
                 </div>
                 <div class="modal-footer">
                     <button type="button" id="form-submit" class="btn btn-primary">Submit</button>
@@ -51,13 +68,11 @@
         </div>
     </div>
 
-    <!-- Leaflet JavaScript -->
+    <!-- JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Leaflet MarkerCluster JavaScript -->
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    <!-- Bootstrap JavaScript for Modal -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- App Script -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
