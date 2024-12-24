@@ -9,16 +9,19 @@ const markerClusterGroup = L.markerClusterGroup();
 map.addLayer(markerClusterGroup);
 
 let userMarker = null;
+let currentPosition = null; // To store the user's current position
+const incidentsData = {};
 
 // Track User Location
 navigator.geolocation.watchPosition(
     (position) => {
         const { latitude, longitude } = position.coords;
+        currentPosition = [latitude, longitude]; // Update the current position
 
         if (userMarker) {
-            userMarker.setLatLng([latitude, longitude]);
+            userMarker.setLatLng(currentPosition);
         } else {
-            userMarker = L.circleMarker([latitude, longitude], {
+            userMarker = L.circleMarker(currentPosition, {
                 radius: 8,
                 color: 'blue',
                 fillColor: 'white',
@@ -26,7 +29,7 @@ navigator.geolocation.watchPosition(
             }).addTo(map);
         }
 
-        map.setView([latitude, longitude], 13);
+        map.setView(currentPosition, 13);
     },
     (error) => {
         console.error(error);
@@ -40,9 +43,14 @@ document.getElementById('report-button').addEventListener('click', () => {
     formModal.show();
 
     document.getElementById('form-submit').onclick = () => {
+        if (!currentPosition) {
+            alert('Unable to detect your current location. Please enable location services.');
+            return;
+        }
+
         const issueType = document.getElementById('issue-type').value;
         const photoFile = document.getElementById('photo-upload').files[0];
-        const marker = L.marker(map.getCenter());
+        const marker = L.marker(currentPosition);
 
         let popupContent = `<b>Issue Type:</b> ${issueType}`;
         if (photoFile) {
@@ -55,7 +63,18 @@ document.getElementById('report-button').addEventListener('click', () => {
             <br><button class="btn btn-secondary mt-2" onclick="copyIncidentLink('${issueType}')">Copy Link</button>
         `;
 
-        marker.bindPopup(popupContent).addTo(markerClusterGroup);
+        marker.bindPopup(popupContent);
+
+        // Add the marker to the map and ensure the popup is fully visible
+        marker.addTo(markerClusterGroup).on('popupopen', () => {
+            map.panTo(marker.getLatLng(), { animate: true });
+            setTimeout(() => map.panBy([0, -100]), 500); // Adjust vertical offset for better visibility
+        });
+
+        if (!incidentsData[issueType]) {
+            incidentsData[issueType] = 0;
+        }
+        incidentsData[issueType] += 1;
         formModal.hide();
     };
 });
@@ -87,18 +106,22 @@ document.getElementById('stats-tab').addEventListener('click', () => {
     document.getElementById('stats-container').style.display = 'block';
     document.getElementById('stats-tab').classList.add('active');
     document.getElementById('map-tab').classList.remove('active');
+    loadStatistics();
 });
 
 // Populate Statistics
 function loadStatistics() {
     const ctx = document.getElementById('incident-bar-chart').getContext('2d');
+    const labels = Object.keys(incidentsData);
+    const data = Object.values(incidentsData);
+
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Brick Fall', 'Rubbish on Road', 'Water Leakage', 'Road Damage'],
+            labels,
             datasets: [{
                 label: 'Number of Incidents',
-                data: [12, 8, 5, 15],
+                data,
                 backgroundColor: 'rgba(54, 162, 235, 0.6)',
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1
@@ -106,6 +129,7 @@ function loadStatistics() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false, // Allow custom size
             scales: {
                 y: {
                     beginAtZero: true
@@ -114,5 +138,3 @@ function loadStatistics() {
         }
     });
 }
-
-document.getElementById('stats-tab').addEventListener('click', loadStatistics);

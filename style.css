@@ -41,18 +41,17 @@ nav {
 
 #map {
     width: 100%;
-    height: 85%;
+    height: 85%; /* Adjusted for better visibility of elements */
 }
 
 #buttons {
-    margin-top: 5px;
+    height: 10%;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 #report-button {
-    margin-top: 5px;
     padding: 10px 20px;
     background-color: #007bff;
     color: white;
@@ -69,4 +68,10 @@ nav {
     display: none;
     width: 100%;
     height: calc(100vh - 50px);
+}
+
+canvas {
+    width: 80%; /* Constrain chart size */
+    max-height: 500px; /* Prevent oversized charts */
+    margin: auto;
 }
