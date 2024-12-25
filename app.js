@@ -1,6 +1,3 @@
-/***********************************************
- *  GLOBALS
- ***********************************************/
 let map;
 let userMarker;
 let currentPosition = null;
@@ -10,30 +7,24 @@ const markerClusterGroup = L.markerClusterGroup();
 let incidentsData = {};
 let incidents = [];
 let incidentsVotes = {};
-
-// Chart reference
 let lineChart = null;
 
-/***********************************************
- *  PAGE LOAD
- ***********************************************/
+// We'll store a reference to the modal
+let reportModal;
+
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
-  initUIEvents();
+  initUI();
 });
 
-/***********************************************
- *  MAP INIT
- ***********************************************/
 function initMap() {
   navigator.geolocation.getCurrentPosition(
-    pos => {
+    (pos) => {
       currentPosition = [pos.coords.latitude, pos.coords.longitude];
       createMap(currentPosition, 13);
     },
-    err => {
-      console.warn('Geolocation error:', err);
-      // fallback
+    (err) => {
+      console.warn('Geo error:', err);
       createMap([53.8, -1.5], 10);
     },
     { enableHighAccuracy: true }
@@ -47,10 +38,9 @@ function createMap(center, zoom) {
     attribution: '&copy; OSM contributors'
   }).addTo(map);
 
-  // Add cluster group
   map.addLayer(markerClusterGroup);
 
-  // If rotating arrow
+  // Optional rotating arrow
   const arrowIcon = L.icon({
     iconUrl: 'arrow.png',
     iconSize: [32, 32],
@@ -62,40 +52,75 @@ function createMap(center, zoom) {
     rotationOrigin: 'center center'
   }).addTo(map);
 
-  // watch location
-  watchLocation();
-  // watch orientation
-  watchOrientation();
-
-  // map click -> close side panel
   map.on('click', onMapClick);
   map.on('touchstart', onMapClick);
-  // map.on('tap', onMapClick); // optional
+
+  watchLocation();
+  watchOrientation();
 }
 
-function onMapClick() {
-  // Hide side panel
+// On map click/touch, hide side panel
+function onMapClick(e) {
   hideSidePanel();
 }
 
-/***********************************************
- *  UI EVENTS
- ***********************************************/
-function initUIEvents() {
-  // Tabs
-  document.getElementById('map-tab').addEventListener('click', showMapTab);
-  document.getElementById('stats-tab').addEventListener('click', showStatsTab);
+// Hide side panel
+function hideSidePanel() {
+  const panel = document.getElementById('side-panel');
+  panel.classList.remove('panel-open');
+  panel.classList.add('panel-closed');
+}
+
+function watchLocation() {
+  navigator.geolocation.watchPosition(
+    (pos) => {
+      currentPosition = [pos.coords.latitude, pos.coords.longitude];
+      if (userMarker) {
+        userMarker.setLatLng(currentPosition);
+      }
+    },
+    (err) => console.log('watchPosition error:', err),
+    { enableHighAccuracy: true }
+  );
+}
+function watchOrientation() {
+  window.addEventListener('deviceorientation', (evt) => {
+    let heading = evt.alpha;
+    if (typeof evt.webkitCompassHeading === 'number') {
+      heading = evt.webkitCompassHeading;
+    }
+    if (userMarker && heading != null) {
+      userMarker.setRotationAngle(heading);
+    }
+  }, true);
+}
+
+function initUI() {
+  // Map / Stats tab switching
+  document.getElementById('map-tab').addEventListener('click', () => {
+    showMapTab();
+  });
+  document.getElementById('stats-tab').addEventListener('click', () => {
+    showStatsTab();
+  });
 
   // Panel close
   document.getElementById('panel-close-btn').addEventListener('click', hideSidePanel);
 
-  // "Report Incident" => open modal
-  const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+  // The "Report Incident" modal
+  reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
   document.getElementById('report-btn').addEventListener('click', () => {
+    // Show the modal
     reportModal.show();
+
+    // Auto-trigger camera input as soon as modal opens
+    setTimeout(() => {
+      const photoInput = document.getElementById('photo-upload');
+      photoInput.click(); // This attempts to open camera right away
+    }, 500);
   });
 
-  // Modal "Submit"
+  // Submit inside modal
   document.getElementById('modal-submit-btn').addEventListener('click', () => {
     finalizeIncidentSubmission();
     reportModal.hide();
@@ -106,7 +131,7 @@ function initUIEvents() {
 }
 
 /***********************************************
- *  TABS
+ * TAB SWITCHING
  ***********************************************/
 function showMapTab() {
   document.getElementById('map-tab').classList.add('active');
@@ -119,50 +144,20 @@ function showStatsTab() {
   document.getElementById('map-tab').classList.remove('active');
   document.getElementById('map-container').style.display = 'none';
   document.getElementById('stats-container').style.display = 'block';
-  // Load stats
   loadStatisticsData();
 }
 
 /***********************************************
- *  WATCH LOCATION / ORIENTATION
- ***********************************************/
-function watchLocation() {
-  navigator.geolocation.watchPosition(
-    pos => {
-      currentPosition = [pos.coords.latitude, pos.coords.longitude];
-      if (userMarker) {
-        userMarker.setLatLng(currentPosition);
-      }
-    },
-    err => console.log('watchPosition error:', err),
-    { enableHighAccuracy: true }
-  );
-}
-function watchOrientation() {
-  window.addEventListener('deviceorientation', event => {
-    let heading = event.alpha;
-    if (typeof event.webkitCompassHeading === 'number') {
-      heading = event.webkitCompassHeading;
-    }
-    if (userMarker && heading != null) {
-      userMarker.setRotationAngle(heading);
-    }
-  }, true);
-}
-
-/***********************************************
- *  INCIDENT SUBMISSION
+ * FINALIZE SUBMISSION
  ***********************************************/
 function finalizeIncidentSubmission() {
   if (!currentPosition) {
     console.warn('No location found');
     return;
   }
-
   const issueType = document.getElementById('issue-type').value;
   const photoFile = document.getElementById('photo-upload').files[0];
 
-  // Stats
   if (!incidentsData[issueType]) {
     incidentsData[issueType] = 0;
   }
@@ -171,7 +166,7 @@ function finalizeIncidentSubmission() {
   const incId = 'incident-' + Date.now();
   incidentsVotes[incId] = { up: 0, down: 0 };
 
-  const newIncident = {
+  const newInc = {
     id: incId,
     type: issueType,
     time: new Date().toLocaleString(),
@@ -180,25 +175,22 @@ function finalizeIncidentSubmission() {
     photoURL: null
   };
   if (photoFile) {
-    newIncident.photoURL = URL.createObjectURL(photoFile);
+    newInc.photoURL = URL.createObjectURL(photoFile);
   }
-  incidents.push(newIncident);
+  incidents.push(newInc);
 
-  // create marker
-  const marker = L.marker([newIncident.lat, newIncident.lng]);
+  // Add marker
+  const marker = L.marker([newInc.lat, newInc.lng]);
   markerClusterGroup.addLayer(marker);
+  marker.on('click', () => showSidePanel(newInc));
 
-  marker.on('click', () => {
-    showSidePanel(newIncident);
-  });
-
-  // reset form
+  // Reset
   document.getElementById('issue-type').selectedIndex = 0;
   document.getElementById('photo-upload').value = '';
 }
 
 /***********************************************
- *  SIDE PANEL
+ * SIDE PANEL
  ***********************************************/
 function showSidePanel(incident) {
   const votes = incidentsVotes[incident.id];
@@ -207,11 +199,7 @@ function showSidePanel(incident) {
     <p><small>Reported: ${incident.time}</small></p>
   `;
   if (incident.photoURL) {
-    html += `
-      <a href="${incident.photoURL}" target="_blank">
-        <img src="${incident.photoURL}" alt="Incident Photo" style="width:100%; max-height:200px; object-fit:cover;">
-      </a>
-    `;
+    html += `<img src="${incident.photoURL}" alt="Incident Photo" style="width:100%; max-height:200px; object-fit:cover;">`;
   }
   html += `
     <p>Up: ${votes.up} / Down: ${votes.down}
@@ -225,12 +213,6 @@ function showSidePanel(incident) {
   panel.classList.remove('panel-closed');
   panel.classList.add('panel-open');
 }
-function hideSidePanel() {
-  const panel = document.getElementById('side-panel');
-  panel.classList.remove('panel-open');
-  panel.classList.add('panel-closed');
-}
-
 function voteUp(incId) {
   incidentsVotes[incId].up++;
   const inc = incidents.find(i => i.id === incId);
@@ -243,26 +225,24 @@ function voteDown(incId) {
 }
 
 /***********************************************
- *  STATISTICS PAGE
+ * STATISTICS
  ***********************************************/
 function loadStatisticsData() {
-  // e.g. fetch the date from #date-filter
+  // Example
   const dateVal = document.getElementById('date-filter').value;
-  const dateText = (dateVal === '2024-10') ? 'October 2024'
-                  : (dateVal === '2024-09') ? 'September 2024'
-                  : 'August 2024';
+  let dateText = '';
+  if (dateVal === '2024-10') dateText = 'October 2024';
+  else if (dateVal === '2024-09') dateText = 'September 2024';
+  else dateText = 'August 2024';
 
-  // total incidents
   let total = 0;
-  for (let t in incidentsData) {
-    total += incidentsData[t];
-  }
-  // update stats-info text
-  document.getElementById('stats-info').innerHTML =
-    `${total} incidents were reported here in ${dateText}.`;
+  for (const t in incidentsData) total += incidentsData[t];
 
-  // sorted list highest to lowest
-  const sorted = Object.entries(incidentsData).sort((a,b) => b[1]-a[1]);
+  document.getElementById('stats-info').innerHTML =
+    `${total} incidents were reported in ${dateText}.`;
+
+  // Sort from highest to lowest
+  const sorted = Object.entries(incidentsData).sort((a,b) => b[1] - a[1]);
   let listHTML = '';
   sorted.forEach(([type,count]) => {
     listHTML += `
@@ -281,14 +261,14 @@ function loadStatisticsData() {
     type: 'line',
     data: {
       labels: [
-        'Nov 2023','Dec 2023','Jan 2024','Feb 2024','Mar 2024',
-        'Apr 2024','May 2024','Jun 2024','Jul 2024','Aug 2024',
-        'Sep 2024','Oct 2024'
+        'Nov 2023','Dec 2023','Jan 2024','Feb 2024',
+        'Mar 2024','Apr 2024','May 2024','Jun 2024',
+        'Jul 2024','Aug 2024','Sep 2024','Oct 2024'
       ],
       datasets: [
         {
           label: 'Incidents per Month',
-          data: [2500,2200,2300,2100,2200,2150,2300,2400,2350,2200,2100, total+1800],
+          data: [2200,2100,2000,2150,2100,2050,2100,2200,2300,2200,2000, total + 1500],
           borderColor: '#00c06d',
           backgroundColor: '#ccffd6',
           fill: true,
@@ -298,12 +278,7 @@ function loadStatisticsData() {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: false
-        }
-      }
+      maintainAspectRatio: false
     }
   });
 }
