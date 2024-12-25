@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <!-- Required for mobile responsiveness -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Incident Reporting Demo</title>
+  <title>Incident Reporting</title>
 
   <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
-  <!-- Leaflet MarkerCluster CSS (if needed) -->
+  <!-- MarkerCluster CSS (for clustering) -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
@@ -21,7 +21,7 @@
     href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
   />
 
-  <!-- Bootstrap 5 CSS -->
+  <!-- Bootstrap CSS -->
   <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
@@ -35,23 +35,30 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- Custom CSS -->
+  <!-- Chart.js (for line graph) is loaded in the body as a script -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- HEADER -->
-  <header>
-    <!-- Middle banner with Map / Stats tabs -->
-    <div class="center-tabs">
-      <button id="map-tab" class="nav-tab active">Map</button>
-      <button id="stats-tab" class="nav-tab">Statistics</button>
+  <!-- Pinned Banner at Top -->
+  <header class="top-banner">
+    <div class="banner-tabs">
+      <!-- MAP TAB -->
+      <div id="map-tab" class="banner-tab active">
+        <i class="fas fa-map fa-2x tab-icon"></i>
+        <div class="tab-label">Map</div>
+      </div>
+      <!-- STATISTICS TAB -->
+      <div id="stats-tab" class="banner-tab">
+        <i class="fas fa-chart-line fa-2x tab-icon"></i>
+        <div class="tab-label">Statistics</div>
+      </div>
     </div>
   </header>
 
-  <!-- MAP CONTAINER -->
+  <!-- MAP SECTION -->
   <div id="map-container">
     <div id="map"></div>
-    <!-- Report Incident in top-right corner of the map -->
+    <!-- A top-right "Report Incident" button on the map -->
     <button
       id="report-button"
       class="btn btn-primary"
@@ -61,13 +68,37 @@
     </button>
   </div>
 
-  <!-- STATS CONTAINER -->
+  <!-- STATISTICS SECTION -->
   <div id="stats-container">
-    <h4>What's happening?</h4>
-    <canvas id="incident-bar-chart"></canvas>
+    <div class="stats-content">
+      <h2>Statistics</h2>
+      <!-- Date filter (dropdown) -->
+      <label for="date-filter" class="form-label">Select Date:</label>
+      <select id="date-filter" class="form-select">
+        <option value="2024-10">October 2024</option>
+        <option value="2024-09">September 2024</option>
+        <option value="2024-08">August 2024</option>
+        <!-- Add more months/years as needed -->
+      </select>
+
+      <p id="stats-info" class="mt-3">
+        <!-- We'll fill in text like "1323 crimes were reported here in October 2024" -->
+      </p>
+
+      <!-- A sorted list of incidents (highest to lowest) -->
+      <div id="sorted-incident-list" class="mt-3">
+        <!-- We'll programmatically fill this with the top incidents, e.g. -->
+        <!-- "Violence and sexual offences - 339" -->
+      </div>
+
+      <!-- A line graph for monthly data -->
+      <div class="mt-4" style="width: 100%; max-width:600px; margin:0 auto;">
+        <canvas id="line-chart"></canvas>
+      </div>
+    </div>
   </div>
 
-  <!-- SLIDE-IN SIDE PANEL -->
+  <!-- SIDE PANEL (replaces standard popups) -->
   <div id="incident-panel" class="panel-closed">
     <button id="close-panel-btn" class="close-btn">
       <i class="fas fa-times"></i>
@@ -75,7 +106,7 @@
     <div id="incident-content"></div>
   </div>
 
-  <!-- MODAL FOR REPORTING -->
+  <!-- MODAL FOR REPORTING INCIDENT -->
   <div
     class="modal fade"
     id="formModal"
@@ -96,7 +127,7 @@
         </div>
 
         <div class="modal-body">
-          <label for="issue-type" class="form-label">Incident Type:</label>
+          <label for="issue-type" class="form-label">Choose Incident Type:</label>
           <select id="issue-type" class="form-select">
             <option value="Brick Fall">Brick Fall</option>
             <option value="Rubbish on Road">Rubbish on Road</option>
@@ -111,7 +142,6 @@
           </select>
 
           <br/>
-
           <label for="photo-upload" class="form-label">Take Photo:</label>
           <input
             type="file"
@@ -123,12 +153,7 @@
         </div>
 
         <div class="modal-footer">
-          <!-- SUBMIT button here -->
-          <button
-            id="modal-submit-btn"
-            type="button"
-            class="btn btn-success"
-          >
+          <button id="modal-submit-btn" type="button" class="btn btn-success">
             Submit
           </button>
         </div>
@@ -136,7 +161,7 @@
     </div>
   </div>
 
-  <!-- JS LIBRARIES -->
+  <!-- SCRIPTS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   ></script>
@@ -148,12 +173,12 @@
   ></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Leaflet.RotatedMarker plugin -->
+  <!-- Leaflet.RotatedMarker plugin (for rotating user marker) -->
   <script
     src="https://raw.githack.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"
   ></script>
 
-  <!-- OUR APP SCRIPT -->
+  <!-- Your main app logic -->
   <script src="app.js"></script>
 </body>
 </html>

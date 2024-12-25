@@ -1,7 +1,7 @@
 /**************************************
- * BODY & HEADER
+  BODY & FIXED BANNER
 ***************************************/
-body {
+html, body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
@@ -9,81 +9,73 @@ body {
   overflow-y: auto;
 }
 
-/* Header is fixed height, with center content for the tabs */
-header {
-  display: flex;
-  align-items: center;
-  height: 50px;
-  background-color: #fff;
+.top-banner {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 60px;
+  background: #fff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  z-index: 10000; /* ensure it's above side panel */
-  position: relative;
-  justify-content: center; /* center horizontally */
-}
-
-/* Container to hold the Map/Stats tabs in the middle */
-.center-tabs {
+  z-index: 10000; /* so it stays above side panel */
   display: flex;
-  gap: 10px;
+  justify-content: center;
+  align-items: center;
 }
 
-.nav-tab {
-  padding: 5px 15px;
-  font-size: 15px;
-  background-color: white;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  color: black;
+.banner-tabs {
+  display: flex;
+  gap: 50px; /* spacing between the two tabs */
 }
-.nav-tab.active {
-  background-color: #007bff;
-  color: white;
+
+.banner-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: black; /* unselected: black text */
+  cursor: pointer;
+  padding: 5px 15px;
+}
+
+.banner-tab.active {
+  color: #007bff; /* blue when active */
+  font-weight: bold;
+}
+
+.tab-icon {
+  margin-bottom: 2px;
+}
+
+.tab-label {
+  font-size: 14px;
 }
 
 /**************************************
- * MAP & STATS
+  MAP & STATS CONTAINERS
 ***************************************/
 #map-container,
 #stats-container {
   width: 100%;
-  height: calc(100vh - 50px);
   position: relative;
+  /* pinned banner is 60px high, so push down content 60px to avoid overlap */
+  margin-top: 60px;
+  height: calc(100vh - 60px);
 }
 
-/* The map takes the full area */
 #map {
   width: 100%;
   height: 100%;
   min-height: 200px;
 }
 
-/* Stats container hidden initially */
-#stats-container {
-  display: none;
-  text-align: center;
-  overflow: auto;
-  padding: 1rem;
-}
-
-canvas {
-  width: 100%;
-  max-width: 600px;
-  max-height: 70vh;
-  margin: 0 auto;
-}
-
-/**************************************
- * REPORT BUTTON (top-right in #map)
-***************************************/
+/* The "Report Incident" in top-right on map */
 #report-button {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 9999; /* above map, below header? This is fine */
+  z-index: 9999; 
   padding: 8px 16px;
   background-color: #007bff;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -93,18 +85,32 @@ canvas {
 }
 
 /**************************************
- * SIDE PANEL
+  STATISTICS PAGE
+***************************************/
+#stats-container {
+  display: none; /* hidden initially */
+  overflow: auto;
+  padding: 1rem;
+}
+
+.stats-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/**************************************
+  SIDE PANEL (SLIDE IN FROM LEFT)
 ***************************************/
 #incident-panel {
   position: absolute;
-  top: 50px; 
+  top: 60px; /* just below the banner */
   left: 0;
-  width: 250px;
-  height: calc(100vh - 50px);
+  width: 300px;
+  height: calc(100vh - 60px);
   background-color: #f4f4f4;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
   overflow-y: auto;
-  z-index: 9999; /* below the header's 10000 so you can still click stats tab */
+  z-index: 9999; /* below the banner's 10000, so the tabs remain clickable */
   padding: 10px;
 
   transform: translateX(-100%);
@@ -124,7 +130,7 @@ canvas {
 }
 
 /**************************************
- * INCIDENT CONTENT
+  INCIDENT CONTENT
 ***************************************/
 #incident-content img {
   width: 100%;
@@ -135,4 +141,22 @@ canvas {
 }
 #incident-content h3 {
   margin-top: 0;
+}
+
+/**************************************
+  MARKER CLUSTER ADJUSTMENTS
+***************************************/
+/* Make sure cluster numbers are above the user arrow marker */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  z-index: 500; /* higher than default marker z-index */
+}
+
+/**************************************
+  ARROW MARKER (if custom style needed)
+***************************************/
+/* If you want the user marker behind clusters, give it a lower z-index */
+.leaflet-marker-pane img.user-arrow {
+  z-index: 100; /* or something lower than 500 */
 }
