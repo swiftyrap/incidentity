@@ -1,140 +1,301 @@
-const map = L.map('map').setView([51.505, -0.09], 13);
-
-// Add map tiles
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-}).addTo(map);
-
+/***********************************************
+ *  GLOBALS & INITIAL SETUP
+ ***********************************************/
+let map;           // We'll init this after we get location
+let userMarker;     // Circle marker for the user
+let currentPosition;
 const markerClusterGroup = L.markerClusterGroup();
-map.addLayer(markerClusterGroup);
 
-let userMarker = null;
-let currentPosition = null; // To store the user's current position
-const incidentsData = {};
+// For tracking incidents in chart
+let incidentsData = {};   
+// For votes: { "incidentId": { up: 0, down: 0 } }
+let incidentsVotes = {}; 
 
-// Track User Location
-navigator.geolocation.watchPosition(
-    (position) => {
-        const { latitude, longitude } = position.coords;
-        currentPosition = [latitude, longitude]; // Update the current position
+// Chart reference so we can destroy/recreate
+let incidentChart = null;
 
-        if (userMarker) {
-            userMarker.setLatLng(currentPosition);
-        } else {
-            userMarker = L.circleMarker(currentPosition, {
-                radius: 8,
-                color: 'blue',
-                fillColor: 'white',
-                fillOpacity: 1,
-            }).addTo(map);
-        }
 
-        map.setView(currentPosition, 13);
-    },
-    (error) => {
-        console.error(error);
-    },
-    { enableHighAccuracy: true }
+/***********************************************
+ *  INITIALIZE MAP *AFTER* GETTING LOCATION
+ ***********************************************/
+
+// 1) Try to get user’s location once
+navigator.geolocation.getCurrentPosition(
+  (position) => {
+    const { latitude, longitude } = position.coords;
+    currentPosition = [latitude, longitude];
+
+    // Create the map at the user's location
+    map = L.map('map').setView(currentPosition, 15);
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+
+    map.addLayer(markerClusterGroup);
+
+    // Place user marker
+    userMarker = L.circleMarker(currentPosition, {
+      radius: 8,
+      color: 'blue',
+      fillColor: 'white',
+      fillOpacity: 1
+    }).addTo(map);
+
+    // 2) Then also watch for changes to position
+    watchLocationUpdates();
+  },
+  (err) => {
+    console.error('Location error:', err);
+    // If user denies location or an error occurs,
+    // fallback to some default location
+    initMapWithFallback();
+  },
+  { enableHighAccuracy: true }
 );
 
-// Report Incident
+// If user denies geolocation or it fails, just show a default city
+function initMapWithFallback() {
+  map = L.map('map').setView([51.505, -0.09], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+  }).addTo(map);
+
+  map.addLayer(markerClusterGroup);
+
+  watchLocationUpdates();
+}
+
+// Listen for position changes
+function watchLocationUpdates() {
+  navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      currentPosition = [latitude, longitude];
+
+      // If we haven't placed userMarker yet, do so now
+      if (!userMarker) {
+        userMarker = L.circleMarker(currentPosition, {
+          radius: 8,
+          color: 'blue',
+          fillColor: 'white',
+          fillOpacity: 1
+        }).addTo(map);
+      } else {
+        userMarker.setLatLng(currentPosition);
+      }
+    },
+    (error) => console.log('watchPosition error:', error),
+    { enableHighAccuracy: true }
+  );
+}
+
+/***********************************************
+ *  REPORT INCIDENT BUTTON -> SHOW MODAL
+ ***********************************************/
 document.getElementById('report-button').addEventListener('click', () => {
-    const formModal = new bootstrap.Modal(document.getElementById('formModal'));
-    formModal.show();
-
-    document.getElementById('form-submit').onclick = () => {
-        if (!currentPosition) {
-            alert('Unable to detect your current location. Please enable location services.');
-            return;
-        }
-
-        const issueType = document.getElementById('issue-type').value;
-        const photoFile = document.getElementById('photo-upload').files[0];
-        const marker = L.marker(currentPosition);
-
-        let popupContent = `<b>Issue Type:</b> ${issueType}`;
-        if (photoFile) {
-            const photoURL = URL.createObjectURL(photoFile);
-            popupContent += `<br><img src="${photoURL}" alt="Incident Photo" style="width:100%; margin-top:10px;">`;
-        }
-
-        popupContent += `
-            <br><button class="btn btn-success mt-2" onclick="shareOnWhatsApp('${issueType}')">Share on WhatsApp</button>
-            <br><button class="btn btn-secondary mt-2" onclick="copyIncidentLink('${issueType}')">Copy Link</button>
-        `;
-
-        marker.bindPopup(popupContent);
-
-        // Add the marker to the map and ensure the popup is fully visible
-        marker.addTo(markerClusterGroup).on('popupopen', () => {
-            map.panTo(marker.getLatLng(), { animate: true });
-            setTimeout(() => map.panBy([0, -100]), 500); // Adjust vertical offset for better visibility
-        });
-
-        if (!incidentsData[issueType]) {
-            incidentsData[issueType] = 0;
-        }
-        incidentsData[issueType] += 1;
-        formModal.hide();
-    };
+  const formModal = new bootstrap.Modal(document.getElementById('formModal'));
+  formModal.show();
 });
 
-// WhatsApp Sharing Function
+/***********************************************
+ *  SUBMIT INCIDENT
+ ***********************************************/
+document.getElementById('form-submit').onclick = () => {
+  if (!currentPosition) {
+    alert('Unable to detect your current location. Please enable location services.');
+    return;
+  }
+
+  const issueType = document.getElementById('issue-type').value;
+  const photoFile = document.getElementById('photo-upload').files[0];
+  const marker = L.marker(currentPosition);
+
+  // Unique ID for this incident
+  const incidentId = 'incident-' + Date.now();
+  // Initialize votes
+  incidentsVotes[incidentId] = { up: 0, down: 0 };
+
+  // Update incidentsData for the chart
+  if (!incidentsData[issueType]) {
+    incidentsData[issueType] = 0;
+  }
+  incidentsData[issueType] += 1;
+
+  // Time reported
+  const reportedTime = new Date().toLocaleString();
+
+  // Build popup content
+  let popupContent = `
+    <b>${issueType}</b><br/>
+    <small><i>Time Reported: ${reportedTime}</i></small>
+    <br/>
+  `;
+
+  // Photo if present
+  if (photoFile) {
+    const photoURL = URL.createObjectURL(photoFile);
+    // Make image a bit smaller (80% width)
+    popupContent += `
+      <img src="${photoURL}" alt="Incident Photo" style="width:80%; margin-top:5px;" />
+    `;
+  }
+
+  // Votes
+  popupContent += `
+    <div id="${incidentId}-votes" style="margin-top:5px;">
+      Up: 0 / Down: 0
+    </div>
+    <button class="btn btn-outline-success btn-sm" onclick="voteUp('${incidentId}')">
+      Vote Up
+    </button>
+    <button class="btn btn-outline-danger btn-sm" onclick="voteDown('${incidentId}')">
+      Vote Down
+    </button>
+    <hr style="margin:5px 0;"/>
+
+    <button class="btn btn-success btn-sm" onclick="shareOnWhatsApp('${issueType}')">
+      Share on WhatsApp
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="copyIncidentLink('${issueType}')">
+      Copy Link
+    </button>
+  `;
+
+  // Bind the popup
+  marker.bindPopup(popupContent, {
+    autoPan: true,
+    autoPanPadding: [20, 20], // less padding so it's more "centered"
+    maxWidth: 220,            // Make container narrower
+    className: 'incident-popup' // we’ll style in CSS
+  });
+
+  // Add to cluster
+  marker.addTo(markerClusterGroup);
+
+  // Show popup immediately
+  marker.openPopup();
+
+  // Center the popup vertically
+  marker.on('popupopen', () => {
+    setTimeout(() => {
+      // Center map on marker
+      map.setView(marker.getLatLng(), map.getZoom(), { animate: true });
+      // Then pan up ~1/4 screen
+      setTimeout(() => {
+        map.panBy([0, -map.getSize().y / 4], {
+          animate: true,
+          duration: 0.5
+        });
+      }, 300);
+    }, 100);
+  });
+
+  // Hide modal
+  const formModal = bootstrap.Modal.getInstance(document.getElementById('formModal'));
+  formModal.hide();
+};
+
+/***********************************************
+ *  VOTE UP / DOWN
+ ***********************************************/
+function voteUp(incidentId) {
+  incidentsVotes[incidentId].up++;
+  updateVoteDisplay(incidentId);
+}
+
+function voteDown(incidentId) {
+  incidentsVotes[incidentId].down++;
+  updateVoteDisplay(incidentId);
+}
+
+function updateVoteDisplay(incidentId) {
+  const { up, down } = incidentsVotes[incidentId];
+  const votesElem = document.getElementById(`${incidentId}-votes`);
+  if (votesElem) {
+    votesElem.innerHTML = `Up: ${up} / Down: ${down}`;
+  }
+}
+
+/***********************************************
+ *  SHARING FUNCTIONS
+ ***********************************************/
 function shareOnWhatsApp(issueType) {
-    const link = `https://wa.me/?text=Incident reported: ${issueType}`;
-    window.open(link, '_blank');
+  const link = `https://wa.me/?text=Incident reported: ${issueType}`;
+  window.open(link, '_blank');
 }
 
-// Copy Incident Link Function
 function copyIncidentLink(issueType) {
-    const link = `Incident Reported: ${issueType}`;
-    navigator.clipboard.writeText(link).then(() => {
-        alert('Incident link copied!');
-    });
+  const text = `Incident Reported: ${issueType}`;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Incident link copied!');
+  });
 }
 
-// Tab Switching
+/***********************************************
+ *  TAB SWITCHING
+ ***********************************************/
 document.getElementById('map-tab').addEventListener('click', () => {
-    document.getElementById('map-container').style.display = 'block';
-    document.getElementById('stats-container').style.display = 'none';
-    document.getElementById('map-tab').classList.add('active');
-    document.getElementById('stats-tab').classList.remove('active');
+  document.getElementById('map-container').style.display = 'block';
+  document.getElementById('stats-container').style.display = 'none';
+
+  document.getElementById('map-tab').classList.add('active');
+  document.getElementById('stats-tab').classList.remove('active');
 });
 
 document.getElementById('stats-tab').addEventListener('click', () => {
-    document.getElementById('map-container').style.display = 'none';
-    document.getElementById('stats-container').style.display = 'block';
-    document.getElementById('stats-tab').classList.add('active');
-    document.getElementById('map-tab').classList.remove('active');
-    loadStatistics();
+  document.getElementById('map-container').style.display = 'none';
+  document.getElementById('stats-container').style.display = 'block';
+
+  document.getElementById('stats-tab').classList.add('active');
+  document.getElementById('map-tab').classList.remove('active');
+
+  loadStatistics();
 });
 
-// Populate Statistics
+/***********************************************
+ *  LOAD STATISTICS
+ ***********************************************/
 function loadStatistics() {
-    const ctx = document.getElementById('incident-bar-chart').getContext('2d');
-    const labels = Object.keys(incidentsData);
-    const data = Object.values(incidentsData);
+  // Destroy old chart if present
+  if (incidentChart) {
+    incidentChart.destroy();
+  }
+  const ctx = document.getElementById('incident-bar-chart').getContext('2d');
+  const labels = Object.keys(incidentsData);
+  const data = Object.values(incidentsData);
 
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Number of Incidents',
-                data,
-                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false, // Allow custom size
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+  incidentChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Number of Incidents',
+          data: data,
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+          barPercentage: 0.3,
+          categoryPercentage: 0.5,
+          maxBarThickness: 30
         }
-    });
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            precision: 0
+          }
+        }
+      }
+    }
+  });
 }

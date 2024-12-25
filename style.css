@@ -1,77 +1,106 @@
+/* BODY RESET & SCROLLING */
 body {
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    overflow: hidden;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
+/* HEADER */
 header {
-    background-color: white;
-    display: flex;
-    justify-content: center;
-    height: 50px;
-    align-items: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-nav {
-    display: flex;
-    gap: 10px;
-}
-
+/* NAV TABS */
 .nav-tab {
-    padding: 5px 15px;
-    font-size: 14px;
-    border: 1px solid #007bff;
-    background-color: white;
-    border-radius: 5px;
-    cursor: pointer;
-    color: black;
+  padding: 5px 15px;
+  font-size: 15px;
+  background-color: white;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  color: black;
+  margin: 0 5px;
 }
-
 .nav-tab.active {
-    background-color: #007bff;
-    color: white;
+  background-color: #007bff;
+  color: white;
 }
 
-#map-container {
-    width: 100%;
-    height: calc(100vh - 50px);
-}
-
-#map {
-    width: 100%;
-    height: 85%; /* Adjusted for better visibility of elements */
-}
-
-#buttons {
-    height: 10%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-#report-button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-#report-button:hover {
-    background-color: #0056b3;
-}
-
+/* MAP & STATS CONTAINERS */
+#map-container,
 #stats-container {
-    display: none;
-    width: 100%;
-    height: calc(100vh - 50px);
+  width: 100%;
+  height: calc(100vh - 50px);
+  position: relative;
 }
 
+/* MAP */
+#map {
+  width: 100%;
+  height: 85%; 
+  min-height: 200px;
+}
+
+/* REPORT BUTTON ROW */
+#buttons {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* REPORT BUTTON */
+#report-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#report-button:hover {
+  background-color: #0056b3;
+}
+
+/* STATS CONTAINER */
+#stats-container {
+  display: none;
+  text-align: center;
+  overflow: auto; 
+  padding: 1rem;
+}
+
+/* CHART SIZING */
 canvas {
-    width: 80%; /* Constrain chart size */
-    max-height: 500px; /* Prevent oversized charts */
-    margin: auto;
+  width: 100%;
+  max-width: 600px;
+  max-height: 70vh;
+  margin: 0 auto;
+}
+
+/* BOOTSTRAP MODAL */
+.modal-dialog {
+  max-width: 500px;
+}
+.modal-content {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* CUSTOM POPUP CLASS FOR SMALLER CONTAINER */
+.incident-popup .leaflet-popup-content-wrapper {
+  padding: 5px !important; /* reduce padding */
+  font-size: 14px !important; /* smaller font */
+  line-height: 1.2 !important; /* tighter line spacing */
+}
+.incident-popup .leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
 }
