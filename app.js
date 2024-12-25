@@ -1,32 +1,35 @@
 /***********************************************
- *  GLOBALS & INITIAL SETUP
+ * GLOBALS & INITIAL SETUP
  ***********************************************/
 let map;
-let userMarker = null;
-let currentPosition = null;
+let userMarker;
+let currentPosition;
 const markerClusterGroup = L.markerClusterGroup();
 
-// For chart data
+// For stats
 let incidentsData = {};
-// For storing full incident objects
+// Storing incidents
 let incidents = [];
-// For storing up/down votes
+// For up/down votes
 let incidentsVotes = {};
-// For referencing the chart (so we can re-create)
+// For re-creating chart
 let incidentChart = null;
 
+// Modal instance
+let formModal;
+
 /***********************************************
- *  INIT MAP & GEOLOCATION
+ * INIT MAP & GEOLOCATION
  ***********************************************/
 navigator.geolocation.getCurrentPosition(
   (pos) => {
     const { latitude, longitude } = pos.coords;
     currentPosition = [latitude, longitude];
 
-    // Initialize map at user's location
+    // Create map
     map = L.map('map').setView(currentPosition, 15);
 
-    // Add tile layer
+    // Tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -34,10 +37,10 @@ navigator.geolocation.getCurrentPosition(
     // Add cluster group
     map.addLayer(markerClusterGroup);
 
-    // Create user marker with rotated marker plugin
+    // Create user marker (rotated)
     const userIcon = L.icon({
-      iconUrl: 'arrow.png', // ensure arrow.png is in your folder
-      iconSize: [32, 32],
+      iconUrl: 'arrow.png', // arrow.png in same folder
+      iconSize: [32, 32]
     });
     userMarker = L.marker(currentPosition, {
       icon: userIcon,
@@ -45,22 +48,18 @@ navigator.geolocation.getCurrentPosition(
       rotationOrigin: 'center center'
     }).addTo(map);
 
-    // Also watch for position changes
     watchLocationUpdates();
-
-    // Listen for device orientation (to rotate user marker)
     enableDeviceOrientation();
   },
   (err) => {
     console.error('Geolocation error:', err);
-    // Fallback if no location
     initMapFallback();
   },
   { enableHighAccuracy: true }
 );
 
 function initMapFallback() {
-  map = L.map('map').setView([53.8, -1.5], 10); // fallback near Leeds
+  map = L.map('map').setView([53.8, -1.5], 10);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
@@ -71,6 +70,9 @@ function initMapFallback() {
   enableDeviceOrientation();
 }
 
+/***********************************************
+ * WATCH LOCATION
+ ***********************************************/
 function watchLocationUpdates() {
   navigator.geolocation.watchPosition(
     (pos) => {
@@ -85,12 +87,11 @@ function watchLocationUpdates() {
 }
 
 /***********************************************
- *  DEVICE ORIENTATION -> ROTATE MARKER
+ * DEVICE ORIENTATION
  ***********************************************/
 function enableDeviceOrientation() {
   window.addEventListener('deviceorientation', (event) => {
     let heading = event.alpha;
-    // iOS might use webkitCompassHeading
     if (typeof event.webkitCompassHeading === 'number') {
       heading = event.webkitCompassHeading;
     }
@@ -101,57 +102,74 @@ function enableDeviceOrientation() {
 }
 
 /***********************************************
- *  TAB SWITCHING
+ * MAP CLICK -> HIDE PANEL
  ***********************************************/
-document.getElementById('map-tab').addEventListener('click', () => {
-  document.getElementById('map-container').style.display = 'block';
-  document.getElementById('stats-container').style.display = 'none';
+document.addEventListener('DOMContentLoaded', () => {
+  // Wait a bit for map to exist
+  setTimeout(() => {
+    if (map) {
+      map.on('click', () => {
+        hideIncidentPanel();
+      });
+    }
+  }, 500);
 
-  document.getElementById('map-tab').classList.add('active');
-  document.getElementById('stats-tab').classList.remove('active');
-});
+  // Setup the modal
+  formModal = new bootstrap.Modal(document.getElementById('formModal'));
 
-document.getElementById('stats-tab').addEventListener('click', () => {
-  document.getElementById('map-container').style.display = 'none';
-  document.getElementById('stats-container').style.display = 'block';
+  // The "Report Incident" button in top-right corner
+  document.getElementById('report-button').addEventListener('click', () => {
+    formModal.show();
+  });
 
-  document.getElementById('stats-tab').classList.add('active');
-  document.getElementById('map-tab').classList.remove('active');
+  // Modal "Submit"
+  document.getElementById('modal-submit-btn').addEventListener('click', () => {
+    finalizeIncidentSubmission();
+  });
 
-  loadStatistics();
+  // Tabs
+  document.getElementById('map-tab').addEventListener('click', () => {
+    document.getElementById('map-container').style.display = 'block';
+    document.getElementById('stats-container').style.display = 'none';
+
+    document.getElementById('map-tab').classList.add('active');
+    document.getElementById('stats-tab').classList.remove('active');
+  });
+
+  document.getElementById('stats-tab').addEventListener('click', () => {
+    document.getElementById('map-container').style.display = 'none';
+    document.getElementById('stats-container').style.display = 'block';
+
+    document.getElementById('stats-tab').classList.add('active');
+    document.getElementById('map-tab').classList.remove('active');
+
+    loadStatistics();
+  });
 });
 
 /***********************************************
- *  REPORT INCIDENT (MODAL)
+ * FINALIZE SUBMISSION
  ***********************************************/
-document.getElementById('report-button').addEventListener('click', () => {
-  const formModal = new bootstrap.Modal(document.getElementById('formModal'));
-  formModal.show();
-});
-
-document.getElementById('form-submit').onclick = () => {
+function finalizeIncidentSubmission() {
   if (!currentPosition) {
-    alert('Unable to detect your current location. Please enable location services.');
+    console.warn('No current location! Please enable location services.');
+    formModal.hide();
     return;
   }
 
   const issueType = document.getElementById('issue-type').value;
   const photoFile = document.getElementById('photo-upload').files[0];
 
-  // Generate unique ID
   const incidentId = 'incident-' + Date.now();
   incidentsVotes[incidentId] = { up: 0, down: 0 };
 
-  // Update stats data
   if (!incidentsData[issueType]) {
     incidentsData[issueType] = 0;
   }
   incidentsData[issueType] += 1;
 
   const reportedTime = new Date().toLocaleString();
-
-  // Build incident object
-  const incObj = {
+  const incidentObj = {
     id: incidentId,
     type: issueType,
     time: reportedTime,
@@ -160,30 +178,30 @@ document.getElementById('form-submit').onclick = () => {
     photoURL: null
   };
 
-  // If a photo is provided
   if (photoFile) {
-    incObj.photoURL = URL.createObjectURL(photoFile);
+    incidentObj.photoURL = URL.createObjectURL(photoFile);
   }
 
-  // Add to incidents array
-  incidents.push(incObj);
+  incidents.push(incidentObj);
 
   // Create marker
-  const marker = L.marker([incObj.lat, incObj.lng]);
+  const marker = L.marker([incidentObj.lat, incidentObj.lng]);
   markerClusterGroup.addLayer(marker);
 
-  // On marker click, show side panel
   marker.on('click', () => {
-    showIncidentPanel(incObj);
+    showIncidentPanel(incidentObj);
   });
 
-  // Close modal
-  const formModal = bootstrap.Modal.getInstance(document.getElementById('formModal'));
+  // Reset form
+  document.getElementById('issue-type').selectedIndex = 0;
+  document.getElementById('photo-upload').value = '';
+
+  // Hide modal
   formModal.hide();
-};
+}
 
 /***********************************************
- *  STATISTICS (Chart.js)
+ * STATISTICS
  ***********************************************/
 function loadStatistics() {
   if (incidentChart) {
@@ -196,11 +214,11 @@ function loadStatistics() {
   incidentChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: labels,
+      labels,
       datasets: [
         {
           label: 'Number of Incidents',
-          data: data,
+          data,
           backgroundColor: 'rgba(54, 162, 235, 0.6)',
           borderColor: 'rgba(54, 162, 235, 1)',
           borderWidth: 1,
@@ -227,7 +245,7 @@ function loadStatistics() {
 }
 
 /***********************************************
- *  SIDE PANEL LOGIC
+ * SIDE PANEL
  ***********************************************/
 const incidentPanel = document.getElementById('incident-panel');
 const incidentContent = document.getElementById('incident-content');
@@ -249,7 +267,6 @@ function showIncidentPanel(incident) {
   `;
 
   if (incident.photoURL) {
-    // Force it to show the resized image (the CSS handles max-height)
     html += `
       <a href="${incident.photoURL}" target="_blank" rel="noopener noreferrer">
         <img src="${incident.photoURL}" alt="Incident Photo" />
@@ -283,8 +300,6 @@ function showIncidentPanel(incident) {
   `;
 
   incidentContent.innerHTML = html;
-
-  // Slide panel in
   incidentPanel.classList.remove('panel-closed');
   incidentPanel.classList.add('panel-open');
 }
@@ -295,20 +310,18 @@ function hideIncidentPanel() {
 }
 
 /***********************************************
- *  VOTING & SHARING
+ * VOTING & SHARING
  ***********************************************/
 function voteUp(incidentId) {
   incidentsVotes[incidentId].up++;
-  const inc = incidents.find((i) => i.id === incidentId);
-  showIncidentPanel(inc); // re-show so counts update
+  const inc = incidents.find(i => i.id === incidentId);
+  showIncidentPanel(inc);
 }
 function voteDown(incidentId) {
   incidentsVotes[incidentId].down++;
-  const inc = incidents.find((i) => i.id === incidentId);
+  const inc = incidents.find(i => i.id === incidentId);
   showIncidentPanel(inc);
 }
-
-// SHARE
 function shareOnWhatsApp(issueType) {
   const link = `https://wa.me/?text=Incident reported: ${issueType}`;
   window.open(link, '_blank');
@@ -324,6 +337,6 @@ function shareOnInstagram(issueType) {
 function copyIncidentLink(issueType) {
   const text = `Incident Reported: ${issueType}`;
   navigator.clipboard.writeText(text).then(() => {
-    alert('Incident link copied!');
+    console.log('Incident link copied');
   });
 }

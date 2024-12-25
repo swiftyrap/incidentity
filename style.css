@@ -1,26 +1,32 @@
-/*****************************
-  BODY & HEADER 
-******************************/
+/**************************************
+ * BODY & HEADER
+***************************************/
 body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  overflow-x: hidden; /* allow vertical scrolling if needed */
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
+/* Header is fixed height, with center content for the tabs */
 header {
-  background-color: white;
   display: flex;
-  justify-content: center;
   align-items: center;
   height: 50px;
+  background-color: #fff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 10000; /* ensure it's above side panel */
+  position: relative;
+  justify-content: center; /* center horizontally */
 }
 
-/*****************************
-  NAV TABS
-******************************/
+/* Container to hold the Map/Stats tabs in the middle */
+.center-tabs {
+  display: flex;
+  gap: 10px;
+}
+
 .nav-tab {
   padding: 5px 15px;
   font-size: 15px;
@@ -29,41 +35,53 @@ header {
   border: none;
   cursor: pointer;
   color: black;
-  margin: 0 5px;
 }
 .nav-tab.active {
   background-color: #007bff;
   color: white;
 }
 
-/*****************************
-  MAP & STATS CONTAINERS
-******************************/
+/**************************************
+ * MAP & STATS
+***************************************/
 #map-container,
 #stats-container {
   width: 100%;
-  height: calc(100vh - 50px); /* fill screen minus header */
+  height: calc(100vh - 50px);
   position: relative;
 }
 
+/* The map takes the full area */
 #map {
   width: 100%;
-  height: 85%;
+  height: 100%;
   min-height: 200px;
 }
 
-/*****************************
-  REPORT BUTTON
-******************************/
-#buttons {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Stats container hidden initially */
+#stats-container {
+  display: none;
+  text-align: center;
+  overflow: auto;
+  padding: 1rem;
 }
 
+canvas {
+  width: 100%;
+  max-width: 600px;
+  max-height: 70vh;
+  margin: 0 auto;
+}
+
+/**************************************
+ * REPORT BUTTON (top-right in #map)
+***************************************/
 #report-button {
-  padding: 10px 20px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 9999; /* above map, below header? This is fine */
+  padding: 8px 16px;
   background-color: #007bff;
   color: white;
   border: none;
@@ -74,52 +92,24 @@ header {
   background-color: #0056b3;
 }
 
-/*****************************
-  STATS SECTION
-******************************/
-#stats-container {
-  display: none;
-  text-align: center;
-  overflow: auto;
-  padding: 1rem;
-}
-canvas {
-  width: 100%;
-  max-width: 600px;
-  max-height: 70vh;
-  margin: 0 auto;
-}
-
-/*****************************
-  MODAL
-******************************/
-.modal-dialog {
-  max-width: 500px;
-}
-.modal-content {
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-/*****************************
-  SIDE PANEL (SLIDE IN)
-******************************/
+/**************************************
+ * SIDE PANEL
+***************************************/
 #incident-panel {
   position: absolute;
-  top: 50px; /* so it's below the header bar */
+  top: 50px; 
   left: 0;
-  width: 350px;
+  width: 250px;
   height: calc(100vh - 50px);
   background-color: #f4f4f4;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
   overflow-y: auto;
-  z-index: 9999;
+  z-index: 9999; /* below the header's 10000 so you can still click stats tab */
   padding: 10px;
 
   transform: translateX(-100%);
   transition: transform 0.3s ease;
 }
-
 #incident-panel.panel-open {
   transform: translateX(0);
 }
@@ -133,17 +123,16 @@ canvas {
   margin-bottom: 10px;
 }
 
-/*****************************
-  INCIDENT CONTENT 
-******************************/
+/**************************************
+ * INCIDENT CONTENT
+***************************************/
 #incident-content img {
   width: 100%;
-  max-height: 250px;   /* keep uniform so no scroll occurs */
-  object-fit: cover;   /* or contain if you prefer to show entire image */
+  max-height: 200px;
+  object-fit: cover;
   display: block;
   margin-bottom: 10px;
 }
-
 #incident-content h3 {
   margin-top: 0;
 }
