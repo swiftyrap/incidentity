@@ -1,13 +1,14 @@
-/* BODY RESET & SCROLLING */
+/*****************************
+  BODY & HEADER 
+******************************/
 body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  overflow-x: hidden;
+  overflow-x: hidden; /* allow vertical scrolling if needed */
   overflow-y: auto;
 }
 
-/* HEADER */
 header {
   background-color: white;
   display: flex;
@@ -17,7 +18,9 @@ header {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* NAV TABS */
+/*****************************
+  NAV TABS
+******************************/
 .nav-tab {
   padding: 5px 15px;
   font-size: 15px;
@@ -33,22 +36,25 @@ header {
   color: white;
 }
 
-/* MAP & STATS CONTAINERS */
+/*****************************
+  MAP & STATS CONTAINERS
+******************************/
 #map-container,
 #stats-container {
   width: 100%;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 50px); /* fill screen minus header */
   position: relative;
 }
 
-/* MAP */
 #map {
   width: 100%;
-  height: 85%; 
+  height: 85%;
   min-height: 200px;
 }
 
-/* REPORT BUTTON ROW */
+/*****************************
+  REPORT BUTTON
+******************************/
 #buttons {
   width: 100%;
   display: flex;
@@ -56,7 +62,6 @@ header {
   align-items: center;
 }
 
-/* REPORT BUTTON */
 #report-button {
   padding: 10px 20px;
   background-color: #007bff;
@@ -69,15 +74,15 @@ header {
   background-color: #0056b3;
 }
 
-/* STATS CONTAINER */
+/*****************************
+  STATS SECTION
+******************************/
 #stats-container {
   display: none;
   text-align: center;
-  overflow: auto; 
+  overflow: auto;
   padding: 1rem;
 }
-
-/* CHART SIZING */
 canvas {
   width: 100%;
   max-width: 600px;
@@ -85,7 +90,9 @@ canvas {
   margin: 0 auto;
 }
 
-/* BOOTSTRAP MODAL */
+/*****************************
+  MODAL
+******************************/
 .modal-dialog {
   max-width: 500px;
 }
@@ -94,13 +101,49 @@ canvas {
   overflow-y: auto;
 }
 
-/* CUSTOM POPUP CLASS FOR SMALLER CONTAINER */
-.incident-popup .leaflet-popup-content-wrapper {
-  padding: 5px !important; /* reduce padding */
-  font-size: 14px !important; /* smaller font */
-  line-height: 1.2 !important; /* tighter line spacing */
+/*****************************
+  SIDE PANEL (SLIDE IN)
+******************************/
+#incident-panel {
+  position: absolute;
+  top: 50px; /* so it's below the header bar */
+  left: 0;
+  width: 350px;
+  height: calc(100vh - 50px);
+  background-color: #f4f4f4;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  z-index: 9999;
+  padding: 10px;
+
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
 }
-.incident-popup .leaflet-popup-content {
-  margin: 0 !important;
-  padding: 0 !important;
+
+#incident-panel.panel-open {
+  transform: translateX(0);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  float: right;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+/*****************************
+  INCIDENT CONTENT 
+******************************/
+#incident-content img {
+  width: 100%;
+  max-height: 250px;   /* keep uniform so no scroll occurs */
+  object-fit: cover;   /* or contain if you prefer to show entire image */
+  display: block;
+  margin-bottom: 10px;
+}
+
+#incident-content h3 {
+  margin-top: 0;
 }

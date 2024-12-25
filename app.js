@@ -1,89 +1,81 @@
 /***********************************************
  *  GLOBALS & INITIAL SETUP
  ***********************************************/
-let map;           // We'll init this after we get location
-let userMarker;     // Circle marker for the user
-let currentPosition;
+let map;
+let userMarker = null;
+let currentPosition = null;
 const markerClusterGroup = L.markerClusterGroup();
 
-// For tracking incidents in chart
-let incidentsData = {};   
-// For votes: { "incidentId": { up: 0, down: 0 } }
-let incidentsVotes = {}; 
-
-// Chart reference so we can destroy/recreate
+// For chart data
+let incidentsData = {};
+// For storing full incident objects
+let incidents = [];
+// For storing up/down votes
+let incidentsVotes = {};
+// For referencing the chart (so we can re-create)
 let incidentChart = null;
 
-
 /***********************************************
- *  INITIALIZE MAP *AFTER* GETTING LOCATION
+ *  INIT MAP & GEOLOCATION
  ***********************************************/
-
-// 1) Try to get user’s location once
 navigator.geolocation.getCurrentPosition(
-  (position) => {
-    const { latitude, longitude } = position.coords;
+  (pos) => {
+    const { latitude, longitude } = pos.coords;
     currentPosition = [latitude, longitude];
 
-    // Create the map at the user's location
+    // Initialize map at user's location
     map = L.map('map').setView(currentPosition, 15);
 
     // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Add cluster group
     map.addLayer(markerClusterGroup);
 
-    // Place user marker
-    userMarker = L.circleMarker(currentPosition, {
-      radius: 8,
-      color: 'blue',
-      fillColor: 'white',
-      fillOpacity: 1
+    // Create user marker with rotated marker plugin
+    const userIcon = L.icon({
+      iconUrl: 'arrow.png', // ensure arrow.png is in your folder
+      iconSize: [32, 32],
+    });
+    userMarker = L.marker(currentPosition, {
+      icon: userIcon,
+      rotationAngle: 0,
+      rotationOrigin: 'center center'
     }).addTo(map);
 
-    // 2) Then also watch for changes to position
+    // Also watch for position changes
     watchLocationUpdates();
+
+    // Listen for device orientation (to rotate user marker)
+    enableDeviceOrientation();
   },
   (err) => {
-    console.error('Location error:', err);
-    // If user denies location or an error occurs,
-    // fallback to some default location
-    initMapWithFallback();
+    console.error('Geolocation error:', err);
+    // Fallback if no location
+    initMapFallback();
   },
   { enableHighAccuracy: true }
 );
 
-// If user denies geolocation or it fails, just show a default city
-function initMapWithFallback() {
-  map = L.map('map').setView([51.505, -0.09], 13);
-
+function initMapFallback() {
+  map = L.map('map').setView([53.8, -1.5], 10); // fallback near Leeds
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
+    attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
   map.addLayer(markerClusterGroup);
 
   watchLocationUpdates();
+  enableDeviceOrientation();
 }
 
-// Listen for position changes
 function watchLocationUpdates() {
   navigator.geolocation.watchPosition(
     (pos) => {
-      const { latitude, longitude } = pos.coords;
-      currentPosition = [latitude, longitude];
-
-      // If we haven't placed userMarker yet, do so now
-      if (!userMarker) {
-        userMarker = L.circleMarker(currentPosition, {
-          radius: 8,
-          color: 'blue',
-          fillColor: 'white',
-          fillOpacity: 1
-        }).addTo(map);
-      } else {
+      currentPosition = [pos.coords.latitude, pos.coords.longitude];
+      if (userMarker) {
         userMarker.setLatLng(currentPosition);
       }
     },
@@ -93,145 +85,19 @@ function watchLocationUpdates() {
 }
 
 /***********************************************
- *  REPORT INCIDENT BUTTON -> SHOW MODAL
+ *  DEVICE ORIENTATION -> ROTATE MARKER
  ***********************************************/
-document.getElementById('report-button').addEventListener('click', () => {
-  const formModal = new bootstrap.Modal(document.getElementById('formModal'));
-  formModal.show();
-});
-
-/***********************************************
- *  SUBMIT INCIDENT
- ***********************************************/
-document.getElementById('form-submit').onclick = () => {
-  if (!currentPosition) {
-    alert('Unable to detect your current location. Please enable location services.');
-    return;
-  }
-
-  const issueType = document.getElementById('issue-type').value;
-  const photoFile = document.getElementById('photo-upload').files[0];
-  const marker = L.marker(currentPosition);
-
-  // Unique ID for this incident
-  const incidentId = 'incident-' + Date.now();
-  // Initialize votes
-  incidentsVotes[incidentId] = { up: 0, down: 0 };
-
-  // Update incidentsData for the chart
-  if (!incidentsData[issueType]) {
-    incidentsData[issueType] = 0;
-  }
-  incidentsData[issueType] += 1;
-
-  // Time reported
-  const reportedTime = new Date().toLocaleString();
-
-  // Build popup content
-  let popupContent = `
-    <b>${issueType}</b><br/>
-    <small><i>Time Reported: ${reportedTime}</i></small>
-    <br/>
-  `;
-
-  // Photo if present
-  if (photoFile) {
-    const photoURL = URL.createObjectURL(photoFile);
-    // Make image a bit smaller (80% width)
-    popupContent += `
-      <img src="${photoURL}" alt="Incident Photo" style="width:80%; margin-top:5px;" />
-    `;
-  }
-
-  // Votes
-  popupContent += `
-    <div id="${incidentId}-votes" style="margin-top:5px;">
-      Up: 0 / Down: 0
-    </div>
-    <button class="btn btn-outline-success btn-sm" onclick="voteUp('${incidentId}')">
-      Vote Up
-    </button>
-    <button class="btn btn-outline-danger btn-sm" onclick="voteDown('${incidentId}')">
-      Vote Down
-    </button>
-    <hr style="margin:5px 0;"/>
-
-    <button class="btn btn-success btn-sm" onclick="shareOnWhatsApp('${issueType}')">
-      Share on WhatsApp
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="copyIncidentLink('${issueType}')">
-      Copy Link
-    </button>
-  `;
-
-  // Bind the popup
-  marker.bindPopup(popupContent, {
-    autoPan: true,
-    autoPanPadding: [20, 20], // less padding so it's more "centered"
-    maxWidth: 220,            // Make container narrower
-    className: 'incident-popup' // we’ll style in CSS
-  });
-
-  // Add to cluster
-  marker.addTo(markerClusterGroup);
-
-  // Show popup immediately
-  marker.openPopup();
-
-  // Center the popup vertically
-  marker.on('popupopen', () => {
-    setTimeout(() => {
-      // Center map on marker
-      map.setView(marker.getLatLng(), map.getZoom(), { animate: true });
-      // Then pan up ~1/4 screen
-      setTimeout(() => {
-        map.panBy([0, -map.getSize().y / 4], {
-          animate: true,
-          duration: 0.5
-        });
-      }, 300);
-    }, 100);
-  });
-
-  // Hide modal
-  const formModal = bootstrap.Modal.getInstance(document.getElementById('formModal'));
-  formModal.hide();
-};
-
-/***********************************************
- *  VOTE UP / DOWN
- ***********************************************/
-function voteUp(incidentId) {
-  incidentsVotes[incidentId].up++;
-  updateVoteDisplay(incidentId);
-}
-
-function voteDown(incidentId) {
-  incidentsVotes[incidentId].down++;
-  updateVoteDisplay(incidentId);
-}
-
-function updateVoteDisplay(incidentId) {
-  const { up, down } = incidentsVotes[incidentId];
-  const votesElem = document.getElementById(`${incidentId}-votes`);
-  if (votesElem) {
-    votesElem.innerHTML = `Up: ${up} / Down: ${down}`;
-  }
-}
-
-/***********************************************
- *  SHARING FUNCTIONS
- ***********************************************/
-function shareOnWhatsApp(issueType) {
-  const link = `https://wa.me/?text=Incident reported: ${issueType}`;
-  window.open(link, '_blank');
-}
-
-function copyIncidentLink(issueType) {
-  const text = `Incident Reported: ${issueType}`;
-  navigator.clipboard.writeText(text).then(() => {
-    alert('Incident link copied!');
-  });
+function enableDeviceOrientation() {
+  window.addEventListener('deviceorientation', (event) => {
+    let heading = event.alpha;
+    // iOS might use webkitCompassHeading
+    if (typeof event.webkitCompassHeading === 'number') {
+      heading = event.webkitCompassHeading;
+    }
+    if (userMarker && heading != null) {
+      userMarker.setRotationAngle(heading);
+    }
+  }, true);
 }
 
 /***********************************************
@@ -256,10 +122,70 @@ document.getElementById('stats-tab').addEventListener('click', () => {
 });
 
 /***********************************************
- *  LOAD STATISTICS
+ *  REPORT INCIDENT (MODAL)
+ ***********************************************/
+document.getElementById('report-button').addEventListener('click', () => {
+  const formModal = new bootstrap.Modal(document.getElementById('formModal'));
+  formModal.show();
+});
+
+document.getElementById('form-submit').onclick = () => {
+  if (!currentPosition) {
+    alert('Unable to detect your current location. Please enable location services.');
+    return;
+  }
+
+  const issueType = document.getElementById('issue-type').value;
+  const photoFile = document.getElementById('photo-upload').files[0];
+
+  // Generate unique ID
+  const incidentId = 'incident-' + Date.now();
+  incidentsVotes[incidentId] = { up: 0, down: 0 };
+
+  // Update stats data
+  if (!incidentsData[issueType]) {
+    incidentsData[issueType] = 0;
+  }
+  incidentsData[issueType] += 1;
+
+  const reportedTime = new Date().toLocaleString();
+
+  // Build incident object
+  const incObj = {
+    id: incidentId,
+    type: issueType,
+    time: reportedTime,
+    lat: currentPosition[0],
+    lng: currentPosition[1],
+    photoURL: null
+  };
+
+  // If a photo is provided
+  if (photoFile) {
+    incObj.photoURL = URL.createObjectURL(photoFile);
+  }
+
+  // Add to incidents array
+  incidents.push(incObj);
+
+  // Create marker
+  const marker = L.marker([incObj.lat, incObj.lng]);
+  markerClusterGroup.addLayer(marker);
+
+  // On marker click, show side panel
+  marker.on('click', () => {
+    showIncidentPanel(incObj);
+  });
+
+  // Close modal
+  const formModal = bootstrap.Modal.getInstance(document.getElementById('formModal'));
+  formModal.hide();
+};
+
+/***********************************************
+ *  STATISTICS (Chart.js)
  ***********************************************/
 function loadStatistics() {
-  // Destroy old chart if present
   if (incidentChart) {
     incidentChart.destroy();
   }
@@ -297,5 +223,107 @@ function loadStatistics() {
         }
       }
     }
+  });
+}
+
+/***********************************************
+ *  SIDE PANEL LOGIC
+ ***********************************************/
+const incidentPanel = document.getElementById('incident-panel');
+const incidentContent = document.getElementById('incident-content');
+const closePanelBtn = document.getElementById('close-panel-btn');
+
+closePanelBtn.addEventListener('click', () => {
+  hideIncidentPanel();
+});
+
+function showIncidentPanel(incident) {
+  const incId = incident.id;
+  const votes = incidentsVotes[incId];
+  const upCount = votes ? votes.up : 0;
+  const downCount = votes ? votes.down : 0;
+
+  let html = `
+    <h3>${incident.type}</h3>
+    <p><small>Reported: ${incident.time}</small></p>
+  `;
+
+  if (incident.photoURL) {
+    // Force it to show the resized image (the CSS handles max-height)
+    html += `
+      <a href="${incident.photoURL}" target="_blank" rel="noopener noreferrer">
+        <img src="${incident.photoURL}" alt="Incident Photo" />
+      </a>
+    `;
+  }
+
+  html += `
+    <p>Up: ${upCount} / Down: ${downCount}
+      <button class="btn btn-outline-success btn-sm" onclick="voteUp('${incId}')">
+        <i class="fas fa-thumbs-up"></i>
+      </button>
+      <button class="btn btn-outline-danger btn-sm" onclick="voteDown('${incId}')">
+        <i class="fas fa-thumbs-down"></i>
+      </button>
+    </p>
+    <div>
+      <button class="btn btn-secondary btn-sm" onclick="shareOnWhatsApp('${incident.type}')">
+        <i class="fab fa-whatsapp"></i>
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="shareOnFacebook('${incident.type}')">
+        <i class="fab fa-facebook-f"></i>
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="shareOnInstagram('${incident.type}')">
+        <i class="fab fa-instagram"></i>
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="copyIncidentLink('${incident.type}')">
+        <i class="fas fa-link"></i>
+      </button>
+    </div>
+  `;
+
+  incidentContent.innerHTML = html;
+
+  // Slide panel in
+  incidentPanel.classList.remove('panel-closed');
+  incidentPanel.classList.add('panel-open');
+}
+
+function hideIncidentPanel() {
+  incidentPanel.classList.remove('panel-open');
+  incidentPanel.classList.add('panel-closed');
+}
+
+/***********************************************
+ *  VOTING & SHARING
+ ***********************************************/
+function voteUp(incidentId) {
+  incidentsVotes[incidentId].up++;
+  const inc = incidents.find((i) => i.id === incidentId);
+  showIncidentPanel(inc); // re-show so counts update
+}
+function voteDown(incidentId) {
+  incidentsVotes[incidentId].down++;
+  const inc = incidents.find((i) => i.id === incidentId);
+  showIncidentPanel(inc);
+}
+
+// SHARE
+function shareOnWhatsApp(issueType) {
+  const link = `https://wa.me/?text=Incident reported: ${issueType}`;
+  window.open(link, '_blank');
+}
+function shareOnFacebook(issueType) {
+  const shareUrl = encodeURIComponent(`Incident reported: ${issueType}`);
+  const fbLink = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`;
+  window.open(fbLink, '_blank');
+}
+function shareOnInstagram(issueType) {
+  window.open('https://www.instagram.com/', '_blank');
+}
+function copyIncidentLink(issueType) {
+  const text = `Incident Reported: ${issueType}`;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Incident link copied!');
   });
 }
