@@ -18,7 +18,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between; /* space them out */
-  padding: 0 10px; /* small horizontal padding */
+  padding: 0 10px;
 }
 
 /* Left / Center / Right sections in the banner */
@@ -26,13 +26,13 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-width: 80px; /* ensures space for ver:12.02 */
+  min-width: 80px; 
 }
 #center-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px; /* smaller gap so tabs fit on mobile Safari */
+  gap: 20px; 
 }
 #right-section {
   display: flex;
@@ -77,7 +77,7 @@ html, body {
   color: #fff;
 }
 
-/* MAP & STATS Containers */
+/* MAP & STATS */
 #map-container,
 #stats-container {
   position: relative;
@@ -136,9 +136,9 @@ html, body {
   margin-top: 40px;
 }
 
-/* Move Leaflet zoom controls further down */
+/* Move Leaflet zoom controls further down so no half-hidden */
 .leaflet-control-zoom {
-  margin-top: 80px !important; /* so they're never hidden by banner or top bar */
+  margin-top: 120px !important; /* even further down */
 }
 
 /* Marker cluster vs arrow ordering */

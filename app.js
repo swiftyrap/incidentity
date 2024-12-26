@@ -4,12 +4,12 @@ let currentPosition = null;
 const markerClusterGroup = L.markerClusterGroup();
 
 // For stats
-let incidentsData = {};
+let incidentsData = {};   //  e.g. { "2024-10": { "Brick Fall":2, "Rubbish...":1 }, "2024-12": { ... } }
 let incidents = [];
 let incidentsVotes = {};
 let lineChart = null;
 
-let reportModal; // for the Bootstrap "Report Incident" modal
+let reportModal; // for the Bootstrap modal
 
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
@@ -27,7 +27,6 @@ function initMap() {
     },
     (err) => {
       console.warn('Geolocation error:', err);
-      // Fallback if no location or denied
       createMap([53.8, -1.5], 10);
     },
     { enableHighAccuracy: true }
@@ -37,16 +36,15 @@ function initMap() {
 function createMap(center, zoom) {
   map = L.map('map').setView(center, zoom);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Add cluster group
   map.addLayer(markerClusterGroup);
 
-  // Optional rotating arrow for user location
+  // optional user arrow
   const arrowIcon = L.icon({
-    iconUrl: 'arrow.png', // your arrow image
+    iconUrl: 'arrow.png',
     iconSize: [32, 32],
     className: 'user-arrow'
   });
@@ -56,10 +54,9 @@ function createMap(center, zoom) {
     rotationOrigin: 'center center'
   }).addTo(map);
 
-  // Close side panel on map click/touch
+  // hide side panel on map click
   map.on('click', () => hideSidePanel());
   map.on('touchstart', (e) => {
-    // Prevent default scroll/zoom
     e.originalEvent.preventDefault();
     hideSidePanel();
   });
@@ -69,46 +66,35 @@ function createMap(center, zoom) {
 }
 
 /***********************************************
- *  UI EVENTS
+ *  UI
  ***********************************************/
 function initUI() {
-  // Banner tabs
+  // Tabs
   document.getElementById('map-tab').addEventListener('click', showMapTab);
   document.getElementById('stats-tab').addEventListener('click', showStatsTab);
 
-  // Side panel close button
-  document
-    .getElementById('panel-close-btn')
-    .addEventListener('click', hideSidePanel);
+  // Panel close
+  document.getElementById('panel-close-btn').addEventListener('click', hideSidePanel);
 
-  // "Report Incident" modal
+  // "Report Incident"
   reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
   document.getElementById('report-btn').addEventListener('click', () => {
-    // Show the modal
     reportModal.show();
-    // Attempt to auto-open camera input
     setTimeout(() => {
       const photoInput = document.getElementById('photo-upload');
       photoInput.click();
     }, 400);
   });
 
-  // Modal "Submit" button
-  document
-    .getElementById('modal-submit-btn')
-    .addEventListener('click', () => {
-      finalizeIncidentSubmission();
-      reportModal.hide();
-    });
-
-  // Stats date filter
-  document
-    .getElementById('date-filter')
-    .addEventListener('change', loadStatisticsData);
+  // Modal "Submit"
+  document.getElementById('modal-submit-btn').addEventListener('click', () => {
+    finalizeIncidentSubmission();
+    reportModal.hide();
+  });
 }
 
 /***********************************************
- *  TABS (Map <-> Statistics)
+ *  TABS
  ***********************************************/
 function showMapTab() {
   document.getElementById('map-tab').classList.add('active');
@@ -125,12 +111,13 @@ function showStatsTab() {
   document.getElementById('map-container').style.display = 'none';
   document.getElementById('stats-container').style.display = 'block';
 
-  // Load or refresh stats
+  // rebuild the date filter & stats
+  buildDateFilter();
   loadStatisticsData();
 }
 
 /***********************************************
- *  LOCATION UPDATES / ORIENTATION
+ *  LOCATION / ORIENTATION
  ***********************************************/
 function watchLocation() {
   navigator.geolocation.watchPosition(
@@ -144,40 +131,43 @@ function watchLocation() {
     { enableHighAccuracy: true }
   );
 }
-
 function watchOrientation() {
-  window.addEventListener(
-    'deviceorientation',
-    (evt) => {
-      let heading = evt.alpha;
-      if (typeof evt.webkitCompassHeading === 'number') {
-        heading = evt.webkitCompassHeading;
-      }
-      if (userMarker && heading != null) {
-        userMarker.setRotationAngle(heading);
-      }
-    },
-    true
-  );
+  window.addEventListener('deviceorientation', (evt) => {
+    let heading = evt.alpha;
+    if (typeof evt.webkitCompassHeading === 'number') {
+      heading = evt.webkitCompassHeading;
+    }
+    if (userMarker && heading != null) {
+      userMarker.setRotationAngle(heading);
+    }
+  }, true);
 }
 
 /***********************************************
- *  FINALIZE INCIDENT SUBMISSION
+ *  FINALIZE INCIDENT
  ***********************************************/
 function finalizeIncidentSubmission() {
   if (!currentPosition) {
-    console.warn('No current location found!');
+    console.warn('No location found');
     return;
   }
-
   const issueType = document.getElementById('issue-type').value;
   const photoFile = document.getElementById('photo-upload').files[0];
 
-  // Update stats
-  if (!incidentsData[issueType]) {
-    incidentsData[issueType] = 0;
+  // we store date as "YYYY-MM" to group by month
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const monthKey = `${year}-${month}`;  // e.g. "2024-12"
+
+  // Update incidentsData structure, e.g. { "2024-12": { "Brick Fall": 2, ...}, ... }
+  if (!incidentsData[monthKey]) {
+    incidentsData[monthKey] = {};
   }
-  incidentsData[issueType]++;
+  if (!incidentsData[monthKey][issueType]) {
+    incidentsData[monthKey][issueType] = 0;
+  }
+  incidentsData[monthKey][issueType]++;
 
   const incId = 'incident-' + Date.now();
   incidentsVotes[incId] = { up: 0, down: 0 };
@@ -185,33 +175,29 @@ function finalizeIncidentSubmission() {
   const newIncident = {
     id: incId,
     type: issueType,
-    time: new Date().toLocaleString(),
+    time: now.toLocaleString(),  // full date/time
+    monthKey,                   // "YYYY-MM"
     lat: currentPosition[0],
     lng: currentPosition[1],
     photoURL: null
   };
-
   if (photoFile) {
     newIncident.photoURL = URL.createObjectURL(photoFile);
   }
-
   incidents.push(newIncident);
 
-  // Create a marker
+  // marker
   const marker = L.marker([newIncident.lat, newIncident.lng]);
   markerClusterGroup.addLayer(marker);
+  marker.on('click', () => showSidePanel(newIncident));
 
-  marker.on('click', () => {
-    showSidePanel(newIncident);
-  });
-
-  // Reset form
+  // reset
   document.getElementById('issue-type').selectedIndex = 0;
   document.getElementById('photo-upload').value = '';
 }
 
 /***********************************************
- *  SIDE PANEL (Show / Hide)
+ *  SIDE PANEL
  ***********************************************/
 function showSidePanel(incident) {
   const votes = incidentsVotes[incident.id];
@@ -223,25 +209,15 @@ function showSidePanel(incident) {
     html += `
       <img 
         src="${incident.photoURL}" 
-        alt="Incident Photo" 
-        style="width:100%;max-height:200px;object-fit:cover;" 
+        alt="Incident" 
+        style="width:100%; max-height:200px; object-fit:cover;"
       />
     `;
   }
   html += `
     <p>Up: ${votes.up} / Down: ${votes.down}
-      <button 
-        class="btn btn-outline-success btn-sm" 
-        onclick="voteUp('${incident.id}')"
-      >
-        <i class="fas fa-thumbs-up"></i>
-      </button>
-      <button 
-        class="btn btn-outline-danger btn-sm" 
-        onclick="voteDown('${incident.id}')"
-      >
-        <i class="fas fa-thumbs-down"></i>
-      </button>
+      <button class="btn btn-outline-success btn-sm" onclick="voteUp('${incident.id}')"><i class="fas fa-thumbs-up"></i></button>
+      <button class="btn btn-outline-danger btn-sm" onclick="voteDown('${incident.id}')"><i class="fas fa-thumbs-down"></i></button>
     </p>
   `;
   document.getElementById('panel-content').innerHTML = html;
@@ -259,42 +235,70 @@ function hideSidePanel() {
 
 function voteUp(incId) {
   incidentsVotes[incId].up++;
-  const inc = incidents.find((i) => i.id === incId);
+  const inc = incidents.find(i => i.id === incId);
   showSidePanel(inc);
 }
-
 function voteDown(incId) {
   incidentsVotes[incId].down++;
-  const inc = incidents.find((i) => i.id === incId);
+  const inc = incidents.find(i => i.id === incId);
   showSidePanel(inc);
 }
 
 /***********************************************
- *  STATISTICS
+ *  DYNAMIC DATE FILTER & STATS
  ***********************************************/
+
+/** Build the #date-filter dropdown from the actual monthKeys present in incidentsData. */
+function buildDateFilter() {
+  const dateFilter = document.getElementById('date-filter');
+  dateFilter.innerHTML = ''; // clear existing
+
+  // get all monthKeys sorted descending
+  const allMonthKeys = Object.keys(incidentsData).sort().reverse(); 
+  // e.g. ["2024-12","2024-10","2024-09",...]
+
+  allMonthKeys.forEach(mKey => {
+    const option = document.createElement('option');
+    option.value = mKey;
+    // nice label, e.g. "2024-12" => "December 2024"
+    option.textContent = formatMonthKey(mKey);
+    dateFilter.appendChild(option);
+  });
+}
+
+/** Format "YYYY-MM" => "MonthName YYYY", e.g. "2024-12" => "December 2024". */
+function formatMonthKey(mKey) {
+  const [y,m] = mKey.split('-');
+  const monthNum = parseInt(m,10);
+  const dateObj = new Date(parseInt(y,10), monthNum - 1);
+  const monthName = dateObj.toLocaleString('default', { month: 'long' });
+  return `${monthName} ${y}`;
+}
+
 function loadStatisticsData() {
   const dateVal = document.getElementById('date-filter').value;
-  let dateText = '';
-  if (dateVal === '2024-10') {
-    dateText = 'October 2024';
-  } else if (dateVal === '2024-09') {
-    dateText = 'September 2024';
-  } else {
-    dateText = 'August 2024';
+  if (!dateVal || !incidentsData[dateVal]) {
+    // no data for this month
+    document.getElementById('stats-info').innerText = 'No data.';
+    document.getElementById('sorted-incident-list').innerHTML = '';
+    if (lineChart) lineChart.destroy();
+    return;
   }
 
+  // sum up total incidents for dateVal
   let total = 0;
-  for (const t in incidentsData) {
-    total += incidentsData[t];
+  const typeCounts = incidentsData[dateVal]; // e.g. { "Brick Fall": 1, "Rubbish..":2 }
+  for (let t in typeCounts) {
+    total += typeCounts[t];
   }
 
   document.getElementById('stats-info').innerHTML =
-    `${total} incidents were reported in ${dateText}.`;
+    `${total} incidents were reported in ${formatMonthKey(dateVal)}.`;
 
-  // Sort highest to lowest
-  const sorted = Object.entries(incidentsData).sort((a, b) => b[1] - a[1]);
+  // sort highest to lowest
+  const sorted = Object.entries(typeCounts).sort((a,b) => b[1]-a[1]);
   let listHTML = '';
-  sorted.forEach(([type, count]) => {
+  sorted.forEach(([type,count]) => {
     listHTML += `
       <div 
         class="d-flex justify-content-between" 
@@ -307,27 +311,20 @@ function loadStatisticsData() {
   });
   document.getElementById('sorted-incident-list').innerHTML = listHTML;
 
-  // line chart
+  // line chart (just a placeholder example)
   const ctx = document.getElementById('line-chart').getContext('2d');
-  if (lineChart) {
-    lineChart.destroy();
-  }
+  if (lineChart) lineChart.destroy();
   lineChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: [
-        'Nov 2023','Dec 2023','Jan 2024','Feb 2024',
-        'Mar 2024','Apr 2024','May 2024','Jun 2024',
-        'Jul 2024','Aug 2024','Sep 2024','Oct 2024'
+        'Jan','Feb','Mar','Apr','May','Jun',
+        'Jul','Aug','Sep','Oct','Nov','Dec'
       ],
       datasets: [
         {
-          label: 'Incidents per Month',
-          data: [
-            2100, 2000, 1900, 2050,
-            2100, 2200, 2150, 2200,
-            2100, 2300, 2100, total + 1500
-          ],
+          label: 'Incidents in ' + formatMonthKey(dateVal),
+          data: Array(12).fill(0).map((_,i)=> i=== (parseInt(dateVal.split('-')[1],10)-1) ? total : 0),
           borderColor: '#00c06d',
           backgroundColor: '#ccffd6',
           fill: true,
