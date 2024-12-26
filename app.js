@@ -9,8 +9,7 @@ let incidents = [];
 let incidentsVotes = {};
 let lineChart = null;
 
-// We'll keep a reference to the Bootstrap modal
-let reportModal;
+let reportModal; // reference to Bootstrap modal
 
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
@@ -18,15 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /***********************************************
- *  INIT MAP
+ * MAP INIT
  ***********************************************/
 function initMap() {
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
+    pos => {
       currentPosition = [pos.coords.latitude, pos.coords.longitude];
       createMap(currentPosition, 13);
     },
-    (err) => {
+    err => {
       console.warn('Geo error:', err);
       createMap([53.8, -1.5], 10);
     },
@@ -37,13 +36,13 @@ function initMap() {
 function createMap(center, zoom) {
   map = L.map('map').setView(center, zoom);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution: '&copy; OSM contributors'
   }).addTo(map);
 
   map.addLayer(markerClusterGroup);
 
-  // If rotating arrow
+  // optional rotating arrow icon
   const arrowIcon = L.icon({
     iconUrl: 'arrow.png',
     iconSize: [32, 32],
@@ -55,13 +54,11 @@ function createMap(center, zoom) {
     rotationOrigin: 'center center'
   }).addTo(map);
 
-  // Prevent map shift after tap: 
-  // we do `touch-action: none;` in CSS plus these events:
-  map.on('click', (e) => {
-    hideSidePanel();
-  });
+  // Hide side panel on map click
+  map.on('click', (e) => hideSidePanel());
+  // Also handle touch
   map.on('touchstart', (e) => {
-    e.originalEvent.preventDefault(); // stop default scroll
+    e.originalEvent.preventDefault(); 
     hideSidePanel();
   });
 
@@ -70,40 +67,40 @@ function createMap(center, zoom) {
 }
 
 /***********************************************
- *  UI
+ * UI
  ***********************************************/
 function initUI() {
-  // Banner tabs
+  // Tab switching
   document.getElementById('map-tab').addEventListener('click', showMapTab);
   document.getElementById('stats-tab').addEventListener('click', showStatsTab);
 
   // Side panel close
   document.getElementById('panel-close-btn').addEventListener('click', hideSidePanel);
 
-  // "Report Incident" => open modal
+  // "Report Incident" modal
   reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
   document.getElementById('report-btn').addEventListener('click', () => {
-    // Show modal
+    // Show the modal
     reportModal.show();
-    // Auto-trigger camera after short delay
+    // Attempt to auto-open camera
     setTimeout(() => {
       const photoInput = document.getElementById('photo-upload');
       photoInput.click(); 
     }, 400);
   });
 
-  // Modal submit
+  // Submit in modal
   document.getElementById('modal-submit-btn').addEventListener('click', () => {
     finalizeIncidentSubmission();
     reportModal.hide();
   });
 
-  // Stats filter
+  // Stats date filter
   document.getElementById('date-filter').addEventListener('change', loadStatisticsData);
 }
 
 /***********************************************
- *  MAP / STATS TABS
+ * TABS
  ***********************************************/
 function showMapTab() {
   document.getElementById('map-tab').classList.add('active');
@@ -120,17 +117,17 @@ function showStatsTab() {
 }
 
 /***********************************************
- *  LOCATION / ORIENTATION
+ * LOCATION / ORIENTATION
  ***********************************************/
 function watchLocation() {
   navigator.geolocation.watchPosition(
-    (pos) => {
+    pos => {
       currentPosition = [pos.coords.latitude, pos.coords.longitude];
       if (userMarker) {
         userMarker.setLatLng(currentPosition);
       }
     },
-    (err) => console.log('watchPosition error:', err),
+    err => console.log('watchPosition error:', err),
     { enableHighAccuracy: true }
   );
 }
@@ -147,7 +144,7 @@ function watchOrientation() {
 }
 
 /***********************************************
- *  INCIDENT SUBMISSION
+ * FINALIZE INCIDENT
  ***********************************************/
 function finalizeIncidentSubmission() {
   if (!currentPosition) {
@@ -157,7 +154,6 @@ function finalizeIncidentSubmission() {
   const issueType = document.getElementById('issue-type').value;
   const photoFile = document.getElementById('photo-upload').files[0];
 
-  // Stats
   if (!incidentsData[issueType]) {
     incidentsData[issueType] = 0;
   }
@@ -166,7 +162,7 @@ function finalizeIncidentSubmission() {
   const incId = 'incident-' + Date.now();
   incidentsVotes[incId] = { up: 0, down: 0 };
 
-  const newInc = {
+  const newIncident = {
     id: incId,
     type: issueType,
     time: new Date().toLocaleString(),
@@ -175,14 +171,14 @@ function finalizeIncidentSubmission() {
     photoURL: null
   };
   if (photoFile) {
-    newInc.photoURL = URL.createObjectURL(photoFile);
+    newIncident.photoURL = URL.createObjectURL(photoFile);
   }
-  incidents.push(newInc);
+  incidents.push(newIncident);
 
   // marker
-  const marker = L.marker([newInc.lat, newInc.lng]);
+  const marker = L.marker([newIncident.lat, newIncident.lng]);
   markerClusterGroup.addLayer(marker);
-  marker.on('click', () => showSidePanel(newInc));
+  marker.on('click', () => showSidePanel(newIncident));
 
   // reset
   document.getElementById('issue-type').selectedIndex = 0;
@@ -190,7 +186,7 @@ function finalizeIncidentSubmission() {
 }
 
 /***********************************************
- *  SIDE PANEL
+ * SIDE PANEL
  ***********************************************/
 function showSidePanel(incident) {
   const votes = incidentsVotes[incident.id];
@@ -199,7 +195,9 @@ function showSidePanel(incident) {
     <p><small>Reported: ${incident.time}</small></p>
   `;
   if (incident.photoURL) {
-    html += `<img src="${incident.photoURL}" style="width:100%;max-height:200px;object-fit:cover;" />`;
+    html += `
+      <img src="${incident.photoURL}" alt="Incident" style="width:100%;max-height:200px;object-fit:cover;" />
+    `;
   }
   html += `
     <p>Up: ${votes.up} / Down: ${votes.down}
@@ -231,7 +229,7 @@ function voteDown(incId) {
 }
 
 /***********************************************
- *  STATS
+ * STATS
  ***********************************************/
 function loadStatisticsData() {
   const dateVal = document.getElementById('date-filter').value;
@@ -245,7 +243,6 @@ function loadStatisticsData() {
   document.getElementById('stats-info').innerHTML =
     `${total} incidents were reported in ${dateText}.`;
 
-  // sorted
   const sorted = Object.entries(incidentsData).sort((a,b)=>b[1]-a[1]);
   let listHTML = '';
   sorted.forEach(([type,count]) => {
@@ -265,8 +262,9 @@ function loadStatisticsData() {
     type: 'line',
     data: {
       labels: [
-        'Nov 2023','Dec 2023','Jan 2024','Feb 2024','Mar 2024','Apr 2024',
-        'May 2024','Jun 2024','Jul 2024','Aug 2024','Sep 2024','Oct 2024'
+        'Nov 2023','Dec 2023','Jan 2024','Feb 2024','Mar 2024',
+        'Apr 2024','May 2024','Jun 2024','Jul 2024','Aug 2024',
+        'Sep 2024','Oct 2024'
       ],
       datasets: [
         {

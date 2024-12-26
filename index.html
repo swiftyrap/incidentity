@@ -41,9 +41,12 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- PINNED BANNER with version in top-left -->
+  <!-- PINNED BANNER -->
   <header id="top-banner">
-    <div id="version-label">Version: 12</div> <!-- Show version in top-left -->
+    <!-- Show version: 12 in top-left -->
+    <div id="version-label">Version: 12.01</div>
+
+    <!-- Banner Content in center -->
     <div id="banner-content">
       <!-- MAP TAB -->
       <div id="map-tab" class="banner-tab active">
@@ -56,14 +59,16 @@
         <i class="fa-solid fa-chart-line fa-2x tab-icon"></i>
       </div>
     </div>
+
+    <!-- "Report Incident" in top-right of banner -->
+    <button id="report-btn" class="btn btn-primary banner-report-btn">
+      Report Incident
+    </button>
   </header>
 
   <!-- MAP CONTAINER -->
   <div id="map-container">
     <div id="map"></div>
-    <button id="report-btn" class="btn btn-primary">
-      Report Incident
-    </button>
   </div>
 
   <!-- STATS CONTAINER -->
@@ -92,7 +97,7 @@
     <div id="panel-content"></div>
   </div>
 
-  <!-- MODAL FOR INCIDENT REPORTING -->
+  <!-- MODAL FOR REPORTING INCIDENT -->
   <div
     class="modal fade"
     id="reportModal"
@@ -124,7 +129,6 @@
           </select>
           <br/>
           <label for="photo-upload" class="form-label">Take Photo:</label>
-          <!-- removed extra " -->
           <input
             type="file"
             id="photo-upload"
@@ -147,7 +151,7 @@
     </div>
   </div>
 
-  <!-- LEAFLET + JS libs -->
+  <!-- SCRIPTS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   ></script>
@@ -159,12 +163,12 @@
   ></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- RotatedMarker plugin if needed -->
+  <!-- RotatedMarker plugin -->
   <script
     src="https://raw.githack.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"
   ></script>
 
-  <!-- Our main JS -->
+  <!-- MAIN JS -->
   <script src="app.js"></script>
 </body>
 </html>

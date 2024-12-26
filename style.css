@@ -1,13 +1,12 @@
-/* BODY / HTML */
+/* BODY */
 html, body {
-  margin: 0;
+  margin: 0; 
   padding: 0;
   font-family: Arial, sans-serif;
-  /* Keep layout stable, no pinch-zoom: already set in <meta> */
-  overflow-x: hidden;
+  overflow-x: hidden; 
 }
 
-/* PINNED BANNER - 60px tall */
+/* PINNED BANNER (60px) */
 #top-banner {
   position: fixed;
   top: 0; left: 0;
@@ -17,11 +16,11 @@ html, body {
   z-index: 9999;
   box-shadow: 0 2px 5px rgba(0,0,0,0.15);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 }
 
-/* Left corner version label */
+/* Version label in top-left corner */
 #version-label {
   position: absolute;
   left: 10px;
@@ -32,6 +31,16 @@ html, body {
 #banner-content {
   display: flex;
   gap: 50px;
+}
+
+/* Move "Report Incident" to top-right corner of banner */
+.banner-report-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
 }
 
 .banner-tab {
@@ -48,21 +57,21 @@ html, body {
 }
 .tab-title {
   font-size: 14px;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 .tab-icon {
   font-size: 20px;
 }
 
-/* MAP / STATS LAYOUT */
+/* MAP/ STATS CONTAINERS */
 #map-container,
 #stats-container {
   position: relative;
   width: 100%;
   margin-top: 60px; /* offset pinned banner */
   height: calc(100vh - 60px);
-  overflow: hidden; /* prevent page from shifting on mobile Chrome */
-  touch-action: none; /* extra measure to stop default scrolling on tap */
+  overflow: hidden; 
+  touch-action: none; 
 }
 
 #map {
@@ -76,23 +85,9 @@ html, body {
   overflow: auto;
   padding: 1rem;
 }
-
 .stats-content {
   max-width: 800px;
   margin: 0 auto;
-}
-
-/* "REPORT INCIDENT" BUTTON in top-right */
-#report-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2000;
-  border: none;
-  border-radius: 5px;
-  padding: 8px 16px;
-  background: #007bff;
-  color: #fff;
 }
 
 /* SIDE PANEL */
@@ -113,6 +108,7 @@ html, body {
 #side-panel.panel-open {
   transform: translateX(0);
 }
+
 .close-btn {
   background: none;
   border: none;
@@ -126,12 +122,17 @@ html, body {
   margin-top: 40px;
 }
 
-/* MARKER CLUSTER & ARROW ORDERING */
+/* Move Leaflet zoom controls down a bit so they won't be hidden */
+.leaflet-control-zoom {
+  margin-top: 60px !important; /* push below the pinned banner */
+}
+
+/* CLUSTER ABOVE USER ARROW */
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {
-  z-index: 3000;
+  z-index: 3000; 
 }
 .user-arrow {
-  z-index: 100;
+  z-index: 100; 
 }
