@@ -17,39 +17,44 @@ html, body {
   box-shadow: 0 2px 5px rgba(0,0,0,0.15);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between; /* space them out */
+  padding: 0 10px; /* small horizontal padding */
 }
 
-/* Version label in top-left corner */
+/* Left / Center / Right sections in the banner */
+#left-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 80px; /* ensures space for ver:12.02 */
+}
+#center-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px; /* smaller gap so tabs fit on mobile Safari */
+}
+#right-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 120px;
+}
+
+/* ver:12.02 on left */
 #version-label {
-  position: absolute;
-  left: 10px;
-  font-size: 16px;
+  font-size: 14px;
   color: #333;
 }
 
-#banner-content {
-  display: flex;
-  gap: 50px;
-}
-
-/* Move "Report Incident" to top-right corner of banner */
-.banner-report-btn {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  padding: 5px 10px;
-  border: none;
-  border-radius: 5px;
-}
-
+/* MAP / STATS TABS */
 .banner-tab {
   display: flex;
   flex-direction: column;
   align-items: center;
   color: #333;
   cursor: pointer;
-  padding: 5px 10px;
+  padding: 3px 6px;
 }
 .banner-tab.active {
   color: #007bff;
@@ -57,13 +62,22 @@ html, body {
 }
 .tab-title {
   font-size: 14px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 .tab-icon {
   font-size: 20px;
 }
 
-/* MAP/ STATS CONTAINERS */
+/* "REPORT INCIDENT" button on the banner's right side */
+.banner-report-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  background: #007bff;
+  color: #fff;
+}
+
+/* MAP & STATS Containers */
 #map-container,
 #stats-container {
   position: relative;
@@ -80,6 +94,7 @@ html, body {
   min-height: 200px;
 }
 
+/* Stats hidden initially */
 #stats-container {
   display: none;
   overflow: auto;
@@ -108,7 +123,6 @@ html, body {
 #side-panel.panel-open {
   transform: translateX(0);
 }
-
 .close-btn {
   background: none;
   border: none;
@@ -122,17 +136,17 @@ html, body {
   margin-top: 40px;
 }
 
-/* Move Leaflet zoom controls down a bit so they won't be hidden */
+/* Move Leaflet zoom controls further down */
 .leaflet-control-zoom {
-  margin-top: 60px !important; /* push below the pinned banner */
+  margin-top: 80px !important; /* so they're never hidden by banner or top bar */
 }
 
-/* CLUSTER ABOVE USER ARROW */
+/* Marker cluster vs arrow ordering */
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {
-  z-index: 3000; 
+  z-index: 3000;
 }
 .user-arrow {
-  z-index: 100; 
+  z-index: 100;
 }
