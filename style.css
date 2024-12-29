@@ -1,20 +1,22 @@
 /* BODY */
-html, body {
-  margin: 0; 
+html,
+body {
+  margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  overflow-x: hidden; 
+  overflow-x: hidden;
 }
 
 /* PINNED BANNER (60px) */
 #top-banner {
   position: fixed;
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 60px;
   background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
   z-index: 9999;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
   display: flex;
   align-items: center;
   justify-content: space-between; /* space them out */
@@ -26,22 +28,23 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-width: 80px; 
+  min-width: 80px;
 }
 #center-section {
   display: flex;
-  align-items: center;
+  gap: 20px;
   justify-content: center;
-  gap: 20px; 
+  align-items: center;
 }
 #right-section {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 10px;
   min-width: 120px;
 }
 
-/* ver:12.02 on left */
+/* vXX:12.03 on left */
 #version-label {
   font-size: 14px;
   color: #333;
@@ -52,9 +55,9 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #333;
   cursor: pointer;
-  padding: 3px 6px;
+  padding: 3px 9px;
+  color: #333;
 }
 .banner-tab.active {
   color: #007bff;
@@ -72,7 +75,7 @@ html, body {
 .banner-report-btn {
   padding: 5px 10px;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   background: #007bff;
   color: #fff;
 }
@@ -82,21 +85,20 @@ html, body {
 #stats-container {
   position: relative;
   width: 100%;
-  margin-top: 60px; /* offset pinned banner */
-  height: calc(100vh - 60px);
-  overflow: hidden; 
-  touch-action: none; 
+  margin-top: 60px; /* offset pinned banner (60px) */
+  min-height: 200px;
+  overflow: hidden;
 }
 
 #map {
   width: 100%;
   height: 100%;
-  min-height: 200px;
+  min-height: 400px;
 }
 
 /* Stats hidden initially */
 #stats-container {
-  display: none;
+  display: none; /* toggled by JS show/hide */
   overflow: auto;
   padding: 1rem;
 }
@@ -108,12 +110,12 @@ html, body {
 /* SIDE PANEL */
 #side-panel {
   position: fixed;
-  top: 60px; 
+  top: 60px; /* below pinned banner */
   left: 0;
   width: 320px;
   height: calc(100vh - 60px);
   background: #f4f4f4;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   z-index: 9998;
   padding-left: 10px;
   transform: translateX(-100%);
@@ -127,13 +129,23 @@ html, body {
   background: none;
   border: none;
   float: right;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   margin: 8px;
   cursor: pointer;
+  color: #333;
 }
 #panel-content {
   padding: 1rem;
   margin-top: 40px;
+}
+
+/* NEW: Add spacing between photo & vote btns in side panel */
+#panel-content img {
+  margin-bottom: 10px;
+}
+.vote-buttons {
+  display: flex;
+  gap: 10px;
 }
 
 /* Move Leaflet zoom controls further down so no half-hidden */
@@ -145,8 +157,85 @@ html, body {
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {
-  z-index: 3000;
+  z-index: 300;
 }
 .user-arrow {
   z-index: 100;
+}
+
+/* RIGHT PANEL: Incidents in the current map scope */
+#right-panel {
+  position: fixed;
+  top: 60px; /* below pinned banner */
+  right: 0;
+  width: 250px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  background: #f9f9f9;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  z-index: 9999;
+}
+#incidents-in-view > div {
+  padding: 8px 0;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+}
+
+/* TIMELINE (horizontal scroll) */
+#timeline {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 100px;
+  overflow-x: scroll;
+  white-space: nowrap;
+  background: #fff;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 9997;
+  padding: 10px;
+}
+.timeline-item {
+  display: inline-block;
+  width: 80px;
+  margin: 0 10px;
+  text-align: center;
+  cursor: pointer;
+  background: #eee;
+  border-radius: 4px;
+  padding: 5px;
+}
+
+/* Search bar in banner */
+#search-section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+#location-search {
+  padding: 5px;
+  width: 120px;
+}
+
+/* Light/Dark Mode (very basic example) */
+.dark-mode {
+  background: #222 !important;
+  color: #fff !important;
+}
+.dark-mode #side-panel {
+  background: #333 !important;
+}
+.dark-mode #right-panel {
+  background: #444 !important;
+}
+.dark-mode #timeline {
+  background: #333 !important;
+}
+
+/* Basic contributor badges (example) */
+.badge-bronze {
+  color: #ad7a00;
+}
+.badge-silver {
+  color: #999;
 }

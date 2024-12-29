@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Mobile-friendly meta, no pinch-zoom -->
+  <!-- Mobile-friendly meta -->
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
+
   <title>Incident Reporting Demo</title>
 
   <!-- Leaflet CSS -->
@@ -14,6 +15,7 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
+
   <!-- MarkerCluster CSS (optional) -->
   <link
     rel="stylesheet"
@@ -44,8 +46,8 @@
   <!-- PINNED BANNER -->
   <header id="top-banner">
     <div id="left-section">
-      <!-- ver:12.02 on left -->
-      <span id="version-label">ver:12.03</span>
+      <!-- version label on left -->
+      <span id="version-label">vXX.12.03</span>
     </div>
 
     <div id="center-section">
@@ -54,6 +56,7 @@
         <div class="tab-title">Map</div>
         <i class="fa-solid fa-map fa-2x tab-icon"></i>
       </div>
+
       <!-- STATS TAB -->
       <div id="stats-tab" class="banner-tab">
         <div class="tab-title">Statistics</div>
@@ -62,7 +65,24 @@
     </div>
 
     <div id="right-section">
-      <!-- "Report Incident" in top-right of banner -->
+      <!-- Add a search bar in top-right of banner -->
+      <div id="search-section">
+        <input
+          type="text"
+          id="location-search"
+          placeholder="Search location/postcode"
+        />
+        <button id="search-btn" class="btn btn-outline-primary btn-sm">
+          Go
+        </button>
+      </div>
+
+      <!-- Light/Dark toggle (optional) -->
+      <button id="theme-toggle" class="btn btn-secondary btn-sm">
+        Light / Dark
+      </button>
+
+      <!-- "Report Incident" button on top-right of banner -->
       <button id="report-btn" class="btn btn-primary banner-report-btn">
         Report Incident
       </button>
@@ -75,26 +95,20 @@
   </div>
 
   <!-- STATS CONTAINER -->
-  <div id="stats-container">
-    <div class="stats-content">
-      <h2>Statistics Page</h2>
-      <label for="date-filter" class="form-label">Select Date:</label>
-      <select id="date-filter" class="form-select mb-3">
-        <!-- We'll populate months dynamically from actual incidents. -->
-      </select>
-      <p id="stats-info"></p>
-      <div id="sorted-incident-list" class="my-3"></div>
-      <div style="width: 100%; max-width: 600px; margin: 2rem auto;">
-        <canvas id="line-chart"></canvas>
-      </div>
-    </div>
+  <div id="stats-container" class="stats-content">
+    <label for="date-filter" class="form-label">Select Date:</label>
+    <select id="date-filter" class="form-select">
+      <!-- Will populate months dynamically from actual incidentsData -->
+    </select>
+
+    <div id="stats-info" style="margin-top:1rem;"></div>
+    <div id="incident-list" style="max-width: 600px; margin: 0.5rem auto;"></div>
+    <canvas id="line-chart" style="max-width:600px; margin:0 auto;"></canvas>
   </div>
 
   <!-- SIDE PANEL -->
   <div id="side-panel" class="panel-closed">
-    <button id="panel-close-btn" class="close-btn">
-      <i class="fas fa-times"></i>
-    </button>
+    <button id="panel-close-btn" class="close-btn">&times;</button>
     <div id="panel-content"></div>
   </div>
 
@@ -102,14 +116,13 @@
   <div
     class="modal fade"
     id="reportModal"
-    tabindex="-1"
     aria-labelledby="reportModalLabel"
     aria-hidden="true"
   >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="reportModalLabel">Report Incident</h5>
+          <h5 class="modal-title" id="reportModalTitle">Report Incident</h5>
           <button
             type="button"
             class="btn-close"
@@ -122,14 +135,16 @@
           <label for="issue-type" class="form-label">Incident Type:</label>
           <select id="issue-type" class="form-select">
             <option value="Brick Fall">Brick Fall</option>
-            <option value="Rubbish on Road">Rubbish on Road</option>
+            <option value="Rubbish">Rubbish</option>
             <option value="Water Leakage">Water Leakage</option>
-            <option value="Road Damage">Road Damage</option>
             <option value="Streetlight Issues">Streetlight Issues</option>
+            <option value="Road Hazard">Road Hazard</option>
             <option value="Others">Others</option>
           </select>
-          <br/>
-          <label for="photo-upload" class="form-label">Take Photo:</label>
+
+          <label for="photo-upload" class="form-label" style="margin-top:1rem;">
+            Take Photo:
+          </label>
           <input
             type="file"
             id="photo-upload"
@@ -140,11 +155,7 @@
         </div>
 
         <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-success"
-            id="modal-submit-btn"
-          >
+          <button id="modal-submit-btn" class="btn btn-success">
             Submit
           </button>
         </div>
@@ -152,22 +163,33 @@
     </div>
   </div>
 
+  <!-- RIGHT PANEL for Incidents in the current map scope -->
+  <div id="right-panel">
+    <h5>Incidents in View</h5>
+    <div id="incidents-in-view"></div>
+  </div>
+
+  <!-- TIMELINE (horizontal scroll at bottom) -->
+  <div id="timeline"></div>
+
   <!-- SCRIPTS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  ></script>
-  <script
-    src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"
-  ></script>
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-  ></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- RotatedMarker plugin -->
-  <script
-    src="https://raw.githack.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"
-  ></script>
+  <!-- RotatedMarker plugin (optional) -->
+  <script src="https://raw.githubusercontent.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"></script>
+
+  <!-- Heatmap plugin (Leaflet.heat) -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
   <!-- MAIN JS -->
   <script src="app.js"></script>
