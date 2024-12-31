@@ -5,6 +5,7 @@ body {
   padding: 0;
   font-family: Arial, sans-serif;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* PINNED BANNER (60px) */
@@ -19,11 +20,10 @@ body {
   z-index: 9999;
   display: flex;
   align-items: center;
-  justify-content: space-between; /* space them out */
+  justify-content: space-between;
   padding: 0 10px;
 }
 
-/* Left / Center / Right sections in the banner */
 #left-section {
   display: flex;
   align-items: center;
@@ -43,8 +43,6 @@ body {
   gap: 10px;
   min-width: 120px;
 }
-
-/* vXX:12.03 on left */
 #version-label {
   font-size: 14px;
   color: #333;
@@ -79,6 +77,9 @@ body {
   background: #007bff;
   color: #fff;
 }
+.report-btn-text {
+  margin-left: 5px;
+}
 
 /* MAP & STATS */
 #map-container,
@@ -89,38 +90,54 @@ body {
   min-height: 200px;
   overflow: hidden;
 }
-
 #map {
   width: 100%;
   height: 100%;
   min-height: 400px;
 }
 
-/* Stats hidden initially */
+/* Extra bottom margin so the timeline doesn't hide the x-axis */
 #stats-container {
-  display: none; /* toggled by JS show/hide */
+  display: none;
   overflow: auto;
   padding: 1rem;
+  max-width: 100%;
+  margin-bottom: 120px; /* ensures chart x-axis not blocked by bottom timeline */
 }
 .stats-content {
   max-width: 800px;
   margin: 0 auto;
 }
 
-/* SIDE PANEL */
+/* Fix the chart container so it won't become “bottomless” */
+#chart-wrapper {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  height: 400px; 
+  position: relative;
+}
+#chart-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* SIDE PANEL (LEFT) */
 #side-panel {
   position: fixed;
-  top: 60px; /* below pinned banner */
+  top: 60px; 
   left: 0;
-  width: 320px;
+  width: 280px;
   height: calc(100vh - 60px);
   background: #f4f4f4;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   z-index: 9998;
-  padding-left: 10px;
+  /* Reduced padding and smaller font => avoid scrolling */
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
-  overflow-y: auto;
+  overflow-y: hidden; /* hide vertical scroll if possible */
 }
 #side-panel.panel-open {
   transform: translateX(0);
@@ -129,28 +146,34 @@ body {
   background: none;
   border: none;
   float: right;
-  font-size: 1.5rem;
-  margin: 8px;
+  font-size: 1.3rem;
+  margin-right: 0.5rem;
   cursor: pointer;
   color: #333;
+  position: absolute;
+  top: 5px;
+  right: 10px;
 }
 #panel-content {
-  padding: 1rem;
-  margin-top: 40px;
+  margin-top: 30px;
+  /* reduce top space to avoid big gap */
 }
 
-/* NEW: Add spacing between photo & vote btns in side panel */
+/* Photo & vote btns in side panel */
 #panel-content img {
-  margin-bottom: 10px;
+  margin-bottom: 5px;
+  max-width: 100%;
+  height: auto;
 }
 .vote-buttons {
   display: flex;
-  gap: 10px;
+  gap: 6px;
+  margin-top: 5px;
 }
 
 /* Move Leaflet zoom controls further down so no half-hidden */
 .leaflet-control-zoom {
-  margin-top: 120px !important; /* even further down */
+  margin-top: 120px !important;
 }
 
 /* Marker cluster vs arrow ordering */
@@ -166,9 +189,9 @@ body {
 /* RIGHT PANEL: Incidents in the current map scope */
 #right-panel {
   position: fixed;
-  top: 60px; /* below pinned banner */
+  top: 60px;
   right: 0;
-  width: 250px;
+  width: 220px;
   height: calc(100vh - 60px);
   overflow-y: auto;
   background: #f9f9f9;
@@ -187,23 +210,32 @@ body {
   position: fixed;
   bottom: 0;
   width: 100%;
-  height: 100px;
-  overflow-x: scroll;
+  height: 70px; /* reduced from 100px */
+  overflow-x: auto;
+  overflow-y: hidden; /* no vertical scroll */
   white-space: nowrap;
   background: #fff;
   box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
   z-index: 9997;
-  padding: 10px;
+  padding: 5px;
 }
 .timeline-item {
   display: inline-block;
-  width: 80px;
-  margin: 0 10px;
+  width: 60px;  /* narrower */
+  margin: 0 5px;
   text-align: center;
   cursor: pointer;
   background: #eee;
   border-radius: 4px;
-  padding: 5px;
+  padding: 3px;
+  font-size: 0.75rem; /* smaller text for category */
+}
+.timeline-item img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Search bar in banner */
@@ -217,7 +249,7 @@ body {
   width: 120px;
 }
 
-/* Light/Dark Mode (very basic example) */
+/* Light/Dark Mode */
 .dark-mode {
   background: #222 !important;
   color: #fff !important;
@@ -238,4 +270,52 @@ body {
 }
 .badge-silver {
   color: #999;
+}
+
+/* RESPONSIVE (small screens) */
+@media (max-width: 768px) {
+  /* Hide text label on Report button to save space */
+  .report-btn-text {
+    display: none;
+  }
+  #left-section {
+    display: none;
+  }
+  #center-section {
+    gap: 5px;
+  }
+  .banner-tab {
+    padding: 2px 5px;
+  }
+  .tab-title {
+    font-size: 12px;
+  }
+  .tab-icon {
+    font-size: 16px;
+  }
+
+  /* Make side panels narrower for mobile */
+  #side-panel {
+    width: 220px;
+    font-size: 0.8rem;
+    padding: 0.5rem;
+  }
+  #right-panel {
+    width: 180px;
+    font-size: 0.8rem;
+  }
+
+  /* Smaller timeline item widths */
+  #timeline {
+    height: 60px;
+  }
+  .timeline-item {
+    width: 50px;
+    padding: 2px;
+    font-size: 0.7rem;
+  }
+  .timeline-item img {
+    width: 30px;
+    height: 30px;
+  }
 }

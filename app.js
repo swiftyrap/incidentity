@@ -7,7 +7,7 @@ let currentPosition = null;
 const markerClusterGroup = L.markerClusterGroup();
 
 // For stats
-let incidentsData = {};  // e.g. { "2024-10": { "Brick Fall":2, "Rubbish...":1 }, "2024-12": {...} }
+let incidentsData = {};  
 let incidents = [];
 let incidentsVotes = []; // optional if you track up/down individually
 let lineChart = null;
@@ -26,8 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize after DOM is ready
   initMap([53.8008, -1.5491], 13); // Leeds fallback
   initUI();
-  watchLocation();     // tries geolocation
-  watchOrientation();  // tries device orientation
+  watchLocation();     
+  watchOrientation();  
 
   // Build or refresh timeline (initially empty)
   buildTimeline(incidents);
@@ -159,7 +159,7 @@ function watchLocation() {
     },
     (err) => {
       console.warn('Geolocation error or permission denied:', err);
-      // no further action -> remains at Leeds fallback
+      // remains at Leeds fallback
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
@@ -184,7 +184,7 @@ function watchOrientation() {
  * REPORT MODAL
  ***********************/
 function openReportModal() {
-  // Show Bootstrap 5 modal (manually or via data-bs-toggle)
+  // Show Bootstrap 5 modal
   const modal = new bootstrap.Modal(document.getElementById('reportModal'), {});
   modal.show();
 }
@@ -197,7 +197,6 @@ function finalizeIncidentSubmission() {
 
   if (!currentPosition) {
     alert('No location found. Incident cannot be pinned exactly.');
-    // Optionally store offline or just return
     return;
   }
 
@@ -219,7 +218,7 @@ function finalizeIncidentSubmission() {
     lat: currentPosition[0],
     lng: currentPosition[1],
     photoURL: null,
-    status: 'pending',   // brand new => pending verification
+    status: 'pending',
     verifiedCount: 0,
     flaggedCount: 0,
     votes: { up: 0, down: 0 }
@@ -259,37 +258,38 @@ function finalizeIncidentSubmission() {
   // Refresh heatmap
   updateHeatmap();
 
-  alert('Incident reported as Pending Verification.');
+  // (Removed old alert about "Pending Verification")
 }
 
 /***********************
- * SIDE PANEL
+ * SIDE PANEL (LEFT)
  ***********************/
 function showSidePanel(incidentId) {
   const incident = incidents.find((i) => i.id === incidentId);
   if (!incident) return;
 
-  let html = `<h3>${incident.type}<br><small>${incident.time}</small></h3>`;
+  let html = `<h5 style="margin-bottom:4px;">${incident.type}</h5>
+              <small>${incident.time}</small>`;
 
-  // Show status
+  // Status
   if (incident.status === 'pending') {
-    html += `<p>Status: <span style="color:orange;">Pending Verification</span></p>`;
+    html += `<p style="margin-top:4px;">Status: <span style="color:orange;">Pending Verification</span></p>`;
   } else if (incident.status === 'verified') {
-    html += `<p>Status: <span style="color:green;">Verified</span></p>`;
+    html += `<p style="margin-top:4px;">Status: <span style="color:green;">Verified</span></p>`;
   } else {
-    html += `<p>Status: <span style="color:red;">Unverified</span></p>`;
+    html += `<p style="margin-top:4px;">Status: <span style="color:red;">Unverified</span></p>`;
   }
 
   // Photo
   if (incident.photoURL) {
-    html += `<img src="${incident.photoURL}" style="width:100%; max-height:200px; object-fit:cover;" />`;
+    html += `<img src="${incident.photoURL}" alt="Incident Photo"/>`;
   }
 
   // Votes
   const vUp = incident.votes.up;
   const vDown = incident.votes.down;
-  html += `<p>Up: ${vUp} / Down: ${vDown}</p>`;
-  html += `<div class="vote-buttons">
+  html += `<p>Up: ${vUp} / Down: ${vDown}</p>
+           <div class="vote-buttons">
              <button class="btn btn-outline-success btn-sm" onclick="voteUp(${incident.id})">
                <i class="fas fa-thumbs-up"></i>
              </button>
@@ -301,22 +301,38 @@ function showSidePanel(incidentId) {
   // Verification buttons (only if pending)
   if (incident.status === 'pending') {
     html += `
-      <div style="margin-top:10px;">
+      <div style="margin-top:6px;">
         <button class="btn btn-sm btn-success" onclick="verifyIncident(${incident.id}, true)">Verify</button>
         <button class="btn btn-sm btn-warning" onclick="verifyIncident(${incident.id}, false)">Flag False</button>
       </div>`;
   }
 
-  // Share on social media
-  html += `<div style="margin-top:10px;">
-             <button class="btn btn-sm btn-info" onclick="shareIncident(${incident.id})">
-               Share Incident
-             </button>
-           </div>`;
+  // Share => separate buttons for IG, FB, SC, WhatsApp, Twitter, Copy
+  html += `
+    <div style="margin-top:6px;">Share: 
+      <button class="btn btn-sm btn-secondary" onclick="shareInstagram(${incident.id})">
+        <i class="fab fa-instagram"></i>
+      </button>
+      <button class="btn btn-sm btn-primary" onclick="shareFacebook(${incident.id})">
+        <i class="fab fa-facebook"></i>
+      </button>
+      <button class="btn btn-sm btn-warning" onclick="shareSnapchat(${incident.id})">
+        <i class="fab fa-snapchat"></i>
+      </button>
+      <button class="btn btn-sm btn-success" onclick="shareWhatsapp(${incident.id})">
+        <i class="fab fa-whatsapp"></i>
+      </button>
+      <button class="btn btn-sm btn-info" onclick="shareTwitter(${incident.id})">
+        <i class="fab fa-twitter"></i>
+      </button>
+      <button class="btn btn-sm btn-dark" onclick="copyIncidentLink(${incident.id})">
+        <i class="fa-solid fa-link"></i>
+      </button>
+    </div>`;
 
   document.getElementById('panel-content').innerHTML = html;
 
-  // Open side panel
+  // Open the panel
   const panel = document.getElementById('side-panel');
   panel.classList.remove('panel-closed');
   panel.classList.add('panel-open');
@@ -350,23 +366,20 @@ function verifyIncident(incId, isVerified) {
 
   if (isVerified) {
     inc.verifiedCount++;
-    currentUser.points += 5; // reward
+    currentUser.points += 5;
   } else {
     inc.flaggedCount++;
-    // maybe reduce points or no change
   }
   updateContributorBadge();
 
-  // Check thresholds
+  // thresholds
   if (inc.verifiedCount >= 3) {
     inc.status = 'verified';
   } else if (inc.flaggedCount >= 2) {
     inc.status = 'unverified';
   }
 
-  // Re-show side panel
   showSidePanel(incId);
-  // Rebuild any lists or timeline
   updateIncidentsInView();
   buildTimeline(incidents);
 }
@@ -390,7 +403,7 @@ function updateContributorBadge() {
  * HEATMAP
  ***********************/
 function updateHeatmap() {
-  const points = incidents.map((inc) => [inc.lat, inc.lng, 0.5]); // lat, lng, intensity
+  const points = incidents.map((inc) => [inc.lat, inc.lng, 0.5]); 
   heat.setLatLngs(points);
 }
 
@@ -414,28 +427,58 @@ function renderIncidentsList(list) {
                      <small>${inc.time}</small><br>
                      Status: ${inc.status}`;
     div.addEventListener('click', () => {
-      showSidePanel(inc.id);
+      markerClusterGroup.zoomToShowLayer(findMarkerForIncident(inc.id), () => {
+        showSidePanel(inc.id);
+      });
     });
     container.appendChild(div);
   });
 }
 
 /***********************
+ * HELPER: find the Marker for an Incident
+ ***********************/
+function findMarkerForIncident(incidentId) {
+  let found = null;
+  markerClusterGroup.eachLayer((marker) => {
+    if (!marker.getLatLng) return;
+    const inc = incidents.find((i) => i.id === incidentId);
+    if (!inc) return;
+    const lat = marker.getLatLng().lat;
+    const lng = marker.getLatLng().lng;
+    if (Math.abs(lat - inc.lat) < 0.0000001 && Math.abs(lng - inc.lng) < 0.0000001) {
+      found = marker;
+    }
+  });
+  return found;
+}
+
+/***********************
  * HORIZONTAL TIMELINE
  ***********************/
 function buildTimeline(incidentsArray) {
-  // Sort by ID (time-based)
   incidentsArray.sort((a, b) => a.id - b.id);
   const timeline = document.getElementById('timeline');
   timeline.innerHTML = '';
+
   incidentsArray.forEach((inc) => {
     const item = document.createElement('div');
     item.className = 'timeline-item';
-    const dateStr = new Date(inc.id).toLocaleDateString();
-    item.innerHTML = `<strong>${inc.type}</strong><br><small>${dateStr}</small>`;
+
+    // Show smaller photo or 'No Photo'
+    let photoSection = '';
+    if (inc.photoURL) {
+      photoSection = `<img src="${inc.photoURL}" />`;
+    } else {
+      photoSection = `<small>No Photo</small>`;
+    }
+
+    item.innerHTML = `<strong>${inc.type}</strong><br>${photoSection}`;
     item.onclick = () => {
-      map.setView([inc.lat, inc.lng], 15);
-      showSidePanel(inc.id);
+      markerClusterGroup.zoomToShowLayer(findMarkerForIncident(inc.id), () => {
+        map.setView([inc.lat, inc.lng], 15);
+        showSidePanel(inc.id);
+      });
     };
     timeline.appendChild(item);
   });
@@ -446,9 +489,8 @@ function buildTimeline(incidentsArray) {
  ***********************/
 function buildDateFilter() {
   const sel = document.getElementById('date-filter');
-  sel.innerHTML = ''; // clear old
+  sel.innerHTML = '';
 
-  // e.g. ["2024-12", "2024-10", ...]
   const allMonthKeys = Object.keys(incidentsData).sort().reverse();
   allMonthKeys.forEach((mKey) => {
     const opt = document.createElement('option');
@@ -459,7 +501,6 @@ function buildDateFilter() {
 }
 
 function formatMonthKey(mKey) {
-  // "2024-12" => "December 2024"
   const [y, m] = mKey.split('-');
   const year = parseInt(y, 10);
   const monthNum = parseInt(m, 10) - 1;
@@ -477,7 +518,6 @@ function loadStatisticsData() {
     if (lineChart) lineChart.destroy();
     return;
   }
-  // Sum total
   const typeCounts = incidentsData[dateVal];
   let total = 0;
   Object.values(typeCounts).forEach((v) => (total += v));
@@ -486,7 +526,6 @@ function loadStatisticsData() {
     dateVal
   )}.`;
 
-  // Build list of types sorted
   let sorted = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
   let listHTML = '';
   sorted.forEach(([type, count]) => {
@@ -503,14 +542,11 @@ function loadStatisticsData() {
   lineChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: [
-        'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
-      ],
+      labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
       datasets: [
         {
           label: `Incidents in ${formatMonthKey(dateVal)}`,
           data: Array(12).fill(0).map((_, i) => {
-            // If the month index matches dateVal's month, use total
             const splitted = dateVal.split('-');
             const mm = parseInt(splitted[1], 10) - 1;
             return i === mm ? total : 0;
@@ -528,7 +564,6 @@ function loadStatisticsData() {
       scales: {
         y: {
           ticks: {
-            // Force integer steps
             stepSize: 1,
             callback: function (value) {
               return Number.isInteger(value) ? value : null;
@@ -541,26 +576,52 @@ function loadStatisticsData() {
 }
 
 /***********************
- * SHARE INCIDENT (Social Media)
+ * SHARE INCIDENT
  ***********************/
-function shareIncident(incId) {
+function shareInstagram(incId) {
+  const inc = incidents.find((i) => i.id === incId);
+  const shareText = `Check this incident: '${inc.type}' at ${inc.time}`;
+  // Instagram doesn't provide a direct share URL with text, so we do a fallback
+  window.open(`https://www.instagram.com/?text=${encodeURIComponent(shareText)}`, '_blank');
+}
+
+function shareFacebook(incId) {
+  const inc = incidents.find((i) => i.id === incId);
+  const shareText = `I just reported a '${inc.type}' at ${inc.time}!`;
+  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareText)}`;
+  window.open(fbUrl, '_blank');
+}
+
+function shareSnapchat(incId) {
+  const inc = incidents.find((i) => i.id === incId);
+  alert(`Snapchat share is not fully supported on web.\nIncident: ${inc.type} at ${inc.time}`);
+}
+
+function shareWhatsapp(incId) {
+  const inc = incidents.find((i) => i.id === incId);
+  const shareText = `Check this incident: '${inc.type}' at ${inc.time}`;
+  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+  window.open(url, '_blank');
+}
+
+function shareTwitter(incId) {
   const inc = incidents.find((i) => i.id === incId);
   const shareText = `I just reported a '${inc.type}' at ${inc.time}! Check it out!`;
-  // Example: share to Twitter
   const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
   window.open(url, '_blank');
+}
+
+function copyIncidentLink(incId) {
+  const inc = incidents.find((i) => i.id === incId);
+  const linkText = `Incident: ${inc.type}, time: ${inc.time}`;
+  navigator.clipboard.writeText(linkText).then(() => {
+    alert('Incident link copied!');
+  });
 }
 
 /***********************
  * LIGHT/DARK THEME
  ***********************/
 function toggleTheme() {
-  const body = document.body;
-  body.classList.toggle('dark-mode'); // minimal example
+  document.body.classList.toggle('dark-mode');
 }
-
-/***********************
- * (OPTIONAL) OFFLINE DRAFTING
- ***********************/
-// You could store unsubmitted incidents in localStorage if no geolocation found, etc.
-// This is just a placeholder if you want to implement later.
