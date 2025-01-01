@@ -7,15 +7,13 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
-
-  <title>Incident Reporting Demo - v14.02</title>
+  <title>Incident Reporting Demo - v14.06</title>
 
   <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
-
   <!-- MarkerCluster CSS -->
   <link
     rel="stylesheet"
@@ -46,70 +44,80 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- PINNED BANNER -->
-  <header id="top-banner">
-    <div id="left-section">
-      <!-- version label on left -->
-      <span id="version-label">v14.02</span>
-    </div>
-
-    <div id="center-section">
+  <!-- TOP PANEL -->
+  <header id="top-panel" class="d-flex justify-content-between align-items-center">
+    <div id="top-left-section" class="d-flex align-items-center gap-3">
       <!-- MAP TAB -->
-      <div id="map-tab" class="banner-tab active">
-        <div class="tab-title">Map</div>
-        <i class="fa-solid fa-map fa-2x tab-icon"></i>
+      <div id="map-tab" class="tab-btn active" title="Map">
+        <i class="fa-solid fa-map"></i> Map
       </div>
-
       <!-- STATS TAB -->
-      <div id="stats-tab" class="banner-tab">
-        <div class="tab-title">Statistics</div>
-        <i class="fa-solid fa-chart-line fa-2x tab-icon"></i>
+      <div id="stats-tab" class="tab-btn" title="Statistics">
+        <i class="fa-solid fa-chart-line"></i> Statistics
       </div>
     </div>
 
-    <div id="right-section">
-      <!-- Add a search bar in top-right of banner -->
-      <div id="search-section">
+    <!-- REPORT INCIDENT IN THE CENTER -->
+    <div id="report-center-section">
+      <button id="report-btn" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-exclamation-triangle"></i> Report
+      </button>
+    </div>
+
+    <!-- RIGHT SIDE: Search, Dark Mode, Account -->
+    <div id="top-right-section" class="d-flex align-items-center gap-2">
+      <!-- Search bar -->
+      <div id="search-section" class="input-group input-group-sm">
         <input
           type="text"
           id="location-search"
-          placeholder="Search location/postcode"
+          class="form-control"
+          placeholder="Search..."
+          aria-label="Search"
         />
-        <button id="search-btn" class="btn btn-outline-primary btn-sm">
-          Go
+        <button id="search-btn" class="btn btn-outline-primary" type="button">
+          <i class="fa-solid fa-magnifying-glass"></i>
         </button>
       </div>
 
-      <!-- Light/Dark toggle (optional) -->
-      <button id="theme-toggle" class="btn btn-secondary btn-sm">
+      <!-- Theme toggle -->
+      <button id="theme-toggle" class="btn btn-secondary btn-sm" title="Toggle Dark Mode">
         <i class="fa-solid fa-adjust"></i>
       </button>
 
-      <!-- "Report Incident" button on top-right of banner -->
-      <button id="report-btn" class="btn btn-primary banner-report-btn">
-        <i class="fa-solid fa-exclamation-triangle"></i>
-        <span class="report-btn-text">Report</span>
+      <!-- Account button -->
+      <button id="account-btn" class="btn btn-outline-secondary btn-sm" type="button">
+        <i class="fa-solid fa-user"></i>
       </button>
     </div>
   </header>
 
-  <!-- MAP CONTAINER -->
+  <!-- MAP CONTAINER (Full Screen under top panel) -->
   <div id="map-container">
     <div id="map"></div>
+    <!-- TOP-RIGHT MAP OVERLAY FOR VERSION + ZOOM (Leaflet automatically places zoom if configured) -->
+    <div id="map-version-overlay">v14.06</div>
   </div>
 
-  <!-- STATS CONTAINER -->
-  <div id="stats-container" class="stats-content">
-    <label for="date-filter" class="form-label">Select Date:</label>
-    <select id="date-filter" class="form-select">
-      <!-- Populated by JS -->
-    </select>
+  <!-- STATS CONTAINER (hidden by default) -->
+  <div id="stats-container">
+    <!-- 2-column layout: left => chart, right => incident list -->
+    <div id="stats-topbar">
+      <label for="date-filter" class="form-label">Select Date:</label>
+      <select id="date-filter" class="form-select form-select-sm">
+        <!-- Populated by JS -->
+      </select>
+    </div>
 
-    <div id="stats-info" style="margin-top:1rem;"></div>
-    <div id="incident-list" style="max-width: 600px; margin: 0.5rem auto;"></div>
-
-    <div id="chart-wrapper">
-      <canvas id="line-chart"></canvas>
+    <div id="stats-content" class="d-flex">
+      <div id="chart-section">
+        <div id="chart-wrapper">
+          <canvas id="line-chart"></canvas>
+        </div>
+      </div>
+      <div id="incident-list-section">
+        <div id="incident-list"></div>
+      </div>
     </div>
   </div>
 
@@ -150,14 +158,15 @@
           </select>
 
           <label for="photo-upload" class="form-label" style="margin-top:1rem;">
-            Take Photo:
+            Upload Photos:
           </label>
+          <!-- multiple photos -->
           <input
             type="file"
             id="photo-upload"
             class="form-control"
             accept="image/*"
-            capture="camera"
+            multiple
           />
         </div>
 
@@ -170,14 +179,106 @@
     </div>
   </div>
 
-  <!-- RIGHT PANEL for Incidents in the current map scope -->
-  <div id="right-panel">
-    <h5>Incidents in View</h5>
-    <div id="incidents-in-view"></div>
+  <!-- MODAL FOR SHARE METHODS -->
+  <div
+    class="modal fade"
+    id="shareModal"
+    aria-labelledby="shareModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="shareModalTitle">Share Incident</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <p>Share this incident on:</p>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-sm btn-secondary" id="share-instagram">
+              <i class="fab fa-instagram"></i> Instagram
+            </button>
+            <button class="btn btn-sm btn-primary" id="share-facebook">
+              <i class="fab fa-facebook"></i> Facebook
+            </button>
+            <button class="btn btn-sm btn-warning" id="share-snapchat">
+              <i class="fab fa-snapchat"></i> Snapchat
+            </button>
+            <button class="btn btn-sm btn-success" id="share-whatsapp">
+              <i class="fab fa-whatsapp"></i> WhatsApp
+            </button>
+            <button class="btn btn-sm btn-info" id="share-twitter">
+              <i class="fab fa-twitter"></i> Twitter
+            </button>
+            <button class="btn btn-sm btn-dark" id="copy-incident-link">
+              <i class="fa-solid fa-link"></i> Copy Link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- TIMELINE (horizontal scroll at bottom) -->
-  <div id="timeline"></div>
+  <!-- MODAL FOR ACCOUNT SYSTEM (REGISTER/LOGIN, placeholders) -->
+  <div
+    class="modal fade"
+    id="accountModal"
+    aria-labelledby="accountModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="accountModalTitle">Account Management</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+
+        <div class="modal-body">
+          <p>
+            Manage your account information, notifications, membership, and more. 
+            Create a new account or login below.
+          </p>
+          <hr/>
+          <!-- Example placeholder forms -->
+          <label for="email" class="form-label">Email:</label>
+          <input type="email" id="email" class="form-control" />
+
+          <label for="password" class="form-label" style="margin-top:1rem;">Password:</label>
+          <input type="password" id="password" class="form-control" />
+
+          <div class="mt-3 d-flex gap-2">
+            <button id="register-btn" class="btn btn-success btn-sm">Register</button>
+            <button id="login-btn" class="btn btn-primary btn-sm">Login</button>
+          </div>
+
+          <div id="account-message" class="text-success mt-2" style="display:none;">
+            <!-- Feedback message displayed here -->
+          </div>
+
+          <hr />
+          <p><strong>Account Settings:</strong></p>
+          <ul>
+            <li><a href="#">Update Profile</a></li>
+            <li><a href="#">Change Password</a></li>
+            <li><a href="#">Notification Preferences</a></li>
+            <li><a href="#">Membership Plans</a></li>
+            <li><a href="#">Billing History</a></li>
+          </ul>
+
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- LEAFLET AND PLUGINS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

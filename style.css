@@ -1,120 +1,125 @@
-/* BODY */
+/***********************
+ * GLOBAL + BODY
+ ***********************/
 html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
   font-family: Arial, sans-serif;
-  overflow-x: hidden;
   box-sizing: border-box;
+  overflow: hidden; /* no global scroll */
 }
 
-/* PINNED BANNER (60px) */
-#top-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
+#map-container,
+#map {
   width: 100%;
-  height: 60px;
+  height: calc(100% - 50px); /* minus top panel height */
+  margin: 0;
+  padding: 0;
+}
+
+/***********************
+ * TOP PANEL
+ ***********************/
+#top-panel {
+  position: relative;
+  width: 100%;
+  height: 50px;
   background: #fff;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  border-bottom: 1px solid #ccc;
   padding: 0 10px;
+  z-index: 9999;
 }
 
-#left-section {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-width: 80px;
-}
-#center-section {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  align-items: center;
-}
-#right-section {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  min-width: 120px;
-}
-#version-label {
-  font-size: 14px;
-  color: #333;
-}
-
-/* MAP / STATS TABS */
-.banner-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.tab-btn {
   cursor: pointer;
-  padding: 3px 9px;
   color: #333;
-}
-.banner-tab.active {
-  color: #007bff;
-  font-weight: bold;
-}
-.tab-title {
-  font-size: 14px;
-  margin-bottom: 2px;
-}
-.tab-icon {
-  font-size: 20px;
-}
-
-/* "REPORT INCIDENT" button on the banner's right side */
-.banner-report-btn {
-  padding: 5px 10px;
-  border: none;
+  padding: 5px 8px;
   border-radius: 4px;
+  transition: background 0.2s;
+}
+.tab-btn:hover {
+  background: #eaeaea;
+}
+.tab-btn.active {
   background: #007bff;
   color: #fff;
 }
-.report-btn-text {
-  margin-left: 5px;
+
+/***********************
+ * MAP VERSION OVERLAY
+ ***********************/
+#map-version-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 9998;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
 }
 
-/* MAP & STATS */
-#map-container,
+/***********************
+ * STATS CONTAINER
+ ***********************/
 #stats-container {
-  position: relative;
+  position: absolute;
+  top: 50px;
+  left: 0;
   width: 100%;
-  margin-top: 60px; /* offset pinned banner (60px) */
-  min-height: 200px;
+  height: calc(100% - 50px);
+  display: none;
+  background: #fff;
+  z-index: 9997;
+  flex-direction: column;
   overflow: hidden;
 }
-#map {
-  width: 100%;
-  height: 100%;
-  min-height: 400px;
+
+#stats-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.5rem 1rem 0;
 }
 
-/* Extra bottom margin so the timeline doesn't hide the x-axis */
-#stats-container {
-  display: none;
-  overflow: auto;
-  padding: 1rem;
-  max-width: 100%;
-  margin-bottom: 120px; /* ensures chart x-axis not blocked by bottom timeline */
-}
-.stats-content {
-  max-width: 800px;
-  margin: 0 auto;
+#date-filter {
+  width: auto;
+  min-width: 120px;
 }
 
-/* Fix the chart container so it won't become “bottomless” */
+#stats-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  padding: 0.5rem 1rem;
+}
+
+/* Left => chart */
+#chart-section {
+  flex: 0 0 60%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Right => incident list */
+#incident-list-section {
+  flex: 0 0 40%;
+  overflow-y: auto;
+  padding-left: 1rem;
+  border-left: 1px solid #ccc;
+}
+
+/***********************
+ * CHART WRAPPER
+ ***********************/
 #chart-wrapper {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  height: 400px; 
+  width: 80%;
+  max-width: 500px;
+  height: 300px; 
   position: relative;
 }
 #chart-wrapper canvas {
@@ -122,200 +127,99 @@ body {
   height: 100% !important;
 }
 
-/* SIDE PANEL (LEFT) */
+/***********************
+ * SIDE PANEL
+ ***********************/
 #side-panel {
-  position: fixed;
-  top: 60px; 
+  position: absolute;
+  top: 50px;
   left: 0;
   width: 280px;
-  height: calc(100vh - 60px);
+  height: calc(100% - 50px);
   background: #f4f4f4;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
   z-index: 9998;
-  /* Reduced padding and smaller font => avoid scrolling */
   font-size: 0.85rem;
   padding: 0.5rem 0.75rem;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
-  overflow-y: hidden; /* hide vertical scroll if possible */
+  overflow: hidden; /* no scroll bar */
 }
+
 #side-panel.panel-open {
   transform: translateX(0);
 }
+
 .close-btn {
   background: none;
   border: none;
-  float: right;
   font-size: 1.3rem;
-  margin-right: 0.5rem;
   cursor: pointer;
   color: #333;
   position: absolute;
   top: 5px;
   right: 10px;
 }
+
 #panel-content {
-  margin-top: 30px;
-  /* reduce top space to avoid big gap */
+  margin-top: 40px; /* space under close button */
 }
 
-/* Photo & vote btns in side panel */
+/* Photo size bigger */
 #panel-content img {
-  margin-bottom: 5px;
+  display: block;
   max-width: 100%;
-  height: auto;
+  max-height: 180px; /* bigger photo */
+  margin-bottom: 5px;
+  object-fit: cover;
 }
-.vote-buttons {
+
+.like-share-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.verify-row {
+  margin-top: 6px;
   display: flex;
   gap: 6px;
-  margin-top: 5px;
 }
 
-/* Move Leaflet zoom controls further down so no half-hidden */
-.leaflet-control-zoom {
-  margin-top: 120px !important;
-}
-
-/* Marker cluster vs arrow ordering */
-.marker-cluster-small,
-.marker-cluster-medium,
-.marker-cluster-large {
-  z-index: 300;
-}
-.user-arrow {
-  z-index: 100;
-}
-
-/* RIGHT PANEL: Incidents in the current map scope */
-#right-panel {
-  position: fixed;
-  top: 60px;
-  right: 0;
-  width: 220px;
-  height: calc(100vh - 60px);
-  overflow-y: auto;
-  background: #f9f9f9;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
-  padding: 1rem;
-  z-index: 9999;
-}
-#incidents-in-view > div {
-  padding: 8px 0;
-  border-bottom: 1px solid #ccc;
-  cursor: pointer;
-}
-
-/* TIMELINE (horizontal scroll) */
-#timeline {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  height: 70px; /* reduced from 100px */
-  overflow-x: auto;
-  overflow-y: hidden; /* no vertical scroll */
-  white-space: nowrap;
-  background: #fff;
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
-  z-index: 9997;
-  padding: 5px;
-}
-.timeline-item {
-  display: inline-block;
-  width: 60px;  /* narrower */
-  margin: 0 5px;
-  text-align: center;
-  cursor: pointer;
-  background: #eee;
-  border-radius: 4px;
-  padding: 3px;
-  font-size: 0.75rem; /* smaller text for category */
-}
-.timeline-item img {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  display: block;
-  margin: 0 auto;
-}
-
-/* Search bar in banner */
-#search-section {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-#location-search {
-  padding: 5px;
-  width: 120px;
-}
-
-/* Light/Dark Mode */
+/***********************
+ * LIGHT/DARK MODE
+ ***********************/
 .dark-mode {
   background: #222 !important;
   color: #fff !important;
 }
+
 .dark-mode #side-panel {
   background: #333 !important;
 }
-.dark-mode #right-panel {
-  background: #444 !important;
-}
-.dark-mode #timeline {
-  background: #333 !important;
-}
 
-/* Basic contributor badges (example) */
-.badge-bronze {
-  color: #ad7a00;
-}
-.badge-silver {
-  color: #999;
-}
-
-/* RESPONSIVE (small screens) */
+/***********************
+ * RESPONSIVE (SMALL SCREENS)
+ ***********************/
 @media (max-width: 768px) {
-  /* Hide text label on Report button to save space */
-  .report-btn-text {
-    display: none;
-  }
-  #left-section {
-    display: none;
-  }
-  #center-section {
-    gap: 5px;
-  }
-  .banner-tab {
-    padding: 2px 5px;
-  }
-  .tab-title {
-    font-size: 12px;
-  }
-  .tab-icon {
-    font-size: 16px;
-  }
-
-  /* Make side panels narrower for mobile */
   #side-panel {
     width: 220px;
-    font-size: 0.8rem;
-    padding: 0.5rem;
   }
-  #right-panel {
-    width: 180px;
-    font-size: 0.8rem;
+  #panel-content img {
+    max-height: 120px;
   }
-
-  /* Smaller timeline item widths */
-  #timeline {
-    height: 60px;
+  #chart-section {
+    flex: 0 0 100%;
+    height: 300px;
   }
-  .timeline-item {
-    width: 50px;
-    padding: 2px;
-    font-size: 0.7rem;
+  #incident-list-section {
+    flex: 0 0 100%;
+    border-left: none;
+    border-top: 1px solid #ccc;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
   }
-  .timeline-item img {
-    width: 30px;
-    height: 30px;
+  #stats-content {
+    flex-direction: column;
   }
 }
