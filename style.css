@@ -5,18 +5,13 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  font-family: Arial, sans-serif;
   box-sizing: border-box;
-  overflow: hidden; /* no global scroll */
-}
-
-#map-container,
-#map {
   width: 100%;
-  height: calc(100% - 50px); /* minus top panel height */
-  margin: 0;
-  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+  background: #fff;
+  /* For iOS Safari safe areas */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /***********************
@@ -25,30 +20,48 @@ body {
 #top-panel {
   position: relative;
   width: 100%;
-  height: 50px;
+  height: 60px; /* slightly taller than before (was 50) */
   background: #fff;
   border-bottom: 1px solid #ccc;
   padding: 0 10px;
   z-index: 9999;
 }
 
+/* TABS (Map/Stats) => dark green highlight on .active */
 .tab-btn {
   cursor: pointer;
   color: #333;
-  padding: 5px 8px;
+  padding: 8px 12px;
   border-radius: 4px;
   transition: background 0.2s;
+  font-weight: 500;
 }
 .tab-btn:hover {
   background: #eaeaea;
 }
 .tab-btn.active {
-  background: #007bff;
+  background: #006400; /* dark green highlight */
   color: #fff;
 }
 
 /***********************
- * MAP VERSION OVERLAY
+ * MAP CONTAINER
+ ***********************/
+/* Some bottom space => 20px so user sees margin at bottom on mobile */
+#map-container {
+  position: relative;
+  width: 100%;
+  height: calc(100% - 60px - 20px); 
+  margin-bottom: 20px; 
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/***********************
+ * VERSION OVERLAY (top-right, above zoom)
  ***********************/
 #map-version-overlay {
   position: absolute;
@@ -56,10 +69,18 @@ body {
   right: 10px;
   z-index: 9998;
   background: rgba(255, 255, 255, 0.7);
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 4px;
   font-size: 14px;
   color: #333;
+}
+
+/* Make sure the Leaflet zoom control is also at top right, below version number */
+.leaflet-control-zoom {
+  position: absolute !important;
+  top: 50px !important;
+  right: 10px !important;
+  margin: 0 !important;
 }
 
 /***********************
@@ -67,15 +88,16 @@ body {
  ***********************/
 #stats-container {
   position: absolute;
-  top: 50px;
+  top: 60px; /* below top panel */
   left: 0;
   width: 100%;
-  height: calc(100% - 50px);
+  height: calc(100% - 60px);
   display: none;
   background: #fff;
   z-index: 9997;
   flex-direction: column;
   overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 #stats-topbar {
@@ -97,7 +119,7 @@ body {
   padding: 0.5rem 1rem;
 }
 
-/* Left => chart */
+/* chart => left, incident => right */
 #chart-section {
   flex: 0 0 60%;
   display: flex;
@@ -105,7 +127,6 @@ body {
   align-items: center;
 }
 
-/* Right => incident list */
 #incident-list-section {
   flex: 0 0 40%;
   overflow-y: auto;
@@ -119,7 +140,7 @@ body {
 #chart-wrapper {
   width: 80%;
   max-width: 500px;
-  height: 300px; 
+  height: 300px;
   position: relative;
 }
 #chart-wrapper canvas {
@@ -128,14 +149,14 @@ body {
 }
 
 /***********************
- * SIDE PANEL
+ * SIDE PANEL (LEFT)
  ***********************/
 #side-panel {
   position: absolute;
-  top: 50px;
+  top: 60px; /* below top panel */
   left: 0;
   width: 280px;
-  height: calc(100% - 50px);
+  height: calc(100% - 60px);
   background: #f4f4f4;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
   z-index: 9998;
@@ -165,11 +186,11 @@ body {
   margin-top: 40px; /* space under close button */
 }
 
-/* Photo size bigger */
+/* Photo size a bit bigger */
 #panel-content img {
   display: block;
   max-width: 100%;
-  max-height: 180px; /* bigger photo */
+  max-height: 180px;
   margin-bottom: 5px;
   object-fit: cover;
 }
@@ -202,8 +223,15 @@ body {
  * RESPONSIVE (SMALL SCREENS)
  ***********************/
 @media (max-width: 768px) {
+  #top-panel {
+    height: 70px; /* a bit more space for mobile logos */
+  }
+  #map-container {
+    height: calc(100% - 70px - 20px);
+  }
   #side-panel {
     width: 220px;
+    height: calc(100% - 70px);
   }
   #panel-content img {
     max-height: 120px;

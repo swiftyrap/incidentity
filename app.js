@@ -14,7 +14,7 @@ let lineChart = null;
 // For the verification & badge system
 let currentUser = {
   id: 1,
-  points: 0, // for badges
+  points: 0,
   badge: 'none'
 };
 
@@ -25,9 +25,7 @@ let shareIncidentId = null;
  * DOMContentLoaded
  ***********************/
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize map
-  initMap([51.5074, -0.1278], 13); // default: London
-
+  initMap([51.5074, -0.1278], 13); // London default
   initUI();
   watchLocation();
 });
@@ -36,25 +34,23 @@ document.addEventListener('DOMContentLoaded', () => {
  * INIT MAP
  ***********************/
 function initMap(center, zoom) {
-  map = L.map('map').setView(center, zoom);
+  map = L.map('map', { zoomControl: false }).setView(center, zoom);
+
+  // Only 1 zoom button => top right
+  L.control.zoom({ position: 'topright' }).addTo(map);
 
   // OSM tile layer
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Move Zoom controls to top-right
-  L.control.zoom({
-    position: 'topright'
-  }).addTo(map);
-
   // Add cluster group
   map.addLayer(markerClusterGroup);
 
-  // Optional: heatmap
+  // Heatmap layer
   window.heat = L.heatLayer([], { radius: 25, blur: 15, maxZoom: 17 }).addTo(map);
 
-  // user location marker
+  // user icon
   const userIconUrl = 'https://cdn-icons-png.flaticon.com/512/3177/3177361.png';
   userMarker = L.marker(center, {
     icon: L.icon({
@@ -64,38 +60,36 @@ function initMap(center, zoom) {
     })
   }).addTo(map);
 
-  // Hide side panel if map is clicked
+  // Hide side panel on map click
   map.on('click', () => {
     hideSidePanel();
   });
 }
 
 /***********************
- * UI SETUP
+ * INIT UI
  ***********************/
 function initUI() {
   // Tabs
   document.getElementById('map-tab').addEventListener('click', showMapTab);
   document.getElementById('stats-tab').addEventListener('click', showStatsTab);
 
-  // Report Incident => open modal
+  // Report button
   document.getElementById('report-btn').addEventListener('click', openReportModal);
 
-  // Close side panel
+  // Side panel close
   document.getElementById('panel-close-btn').addEventListener('click', hideSidePanel);
 
   // Submit incident
-  document
-    .getElementById('modal-submit-btn')
-    .addEventListener('click', finalizeIncidentSubmission);
+  document.getElementById('modal-submit-btn').addEventListener('click', finalizeIncidentSubmission);
 
-  // Account button => open account modal
+  // Account in the dropdown => show account modal
   document.getElementById('account-btn').addEventListener('click', () => {
     const modal = new bootstrap.Modal(document.getElementById('accountModal'), {});
     modal.show();
   });
 
-  // Register/Login placeholders
+  // Account placeholder actions
   document.getElementById('register-btn').addEventListener('click', () => {
     document.getElementById('account-message').textContent = 'Registration successful!';
     document.getElementById('account-message').style.display = 'block';
@@ -111,9 +105,7 @@ function initUI() {
     if (!query) return;
 
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        query
-      )}`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
       const response = await fetch(url);
       const data = await response.json();
       if (data && data.length > 0) {
@@ -144,16 +136,18 @@ function initUI() {
  * TABS
  ***********************/
 function showMapTab() {
+  // highlight Map
   document.getElementById('map-tab').classList.add('active');
   document.getElementById('stats-tab').classList.remove('active');
 
   document.getElementById('map-container').style.display = 'block';
   document.getElementById('stats-container').style.display = 'none';
 
-  hideSidePanel(); // optional
+  hideSidePanel();
 }
 
 function showStatsTab() {
+  // highlight Stats
   document.getElementById('stats-tab').classList.add('active');
   document.getElementById('map-tab').classList.remove('active');
 
@@ -161,8 +155,6 @@ function showStatsTab() {
   document.getElementById('stats-container').style.display = 'block';
 
   hideSidePanel();
-
-  // Build stats
   buildDateFilter();
   loadStatisticsData();
 }
@@ -172,7 +164,7 @@ function showStatsTab() {
  ***********************/
 function watchLocation() {
   if (!navigator.geolocation) {
-    console.warn('Geolocation not supported. Using London fallback.');
+    console.warn('Geolocation not supported.');
     return;
   }
   navigator.geolocation.watchPosition(
@@ -182,7 +174,7 @@ function watchLocation() {
       map.setView(currentPosition, 13);
     },
     (err) => {
-      console.warn('Geolocation error or permission denied:', err);
+      console.warn('Geolocation error or denied:', err);
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
@@ -207,13 +199,11 @@ function finalizeIncidentSubmission() {
   }
 
   const issueType = document.getElementById('issue-type').value;
-  // multiple files
   const files = document.getElementById('photo-upload').files;
   const fileURLs = [];
 
   for (let f of files) {
-    const url = URL.createObjectURL(f);
-    fileURLs.push(url);
+    fileURLs.push(URL.createObjectURL(f));
   }
 
   const now = new Date();
@@ -228,17 +218,17 @@ function finalizeIncidentSubmission() {
     monthKey,
     lat: currentPosition[0],
     lng: currentPosition[1],
-    photoURLs: fileURLs, // store array of photo URLs
+    photoURLs: fileURLs,
     status: 'pending',
     verifiedCount: 0,
     flaggedCount: 0,
     likes: 0
   };
 
-  // add to array
+  // push
   incidents.push(newIncident);
 
-  // update stats data
+  // stats data
   if (!incidentsData[monthKey]) {
     incidentsData[monthKey] = {};
   }
@@ -271,7 +261,7 @@ function showSidePanel(incidentId) {
   let html = `<h5 style="margin-bottom:4px;">${incident.type}</h5>
               <small>${incident.time}</small>`;
 
-  // Status
+  // status
   if (incident.status === 'pending') {
     html += `<p style="margin-top:4px;">Status: <span style="color:orange;">Pending Verification</span></p>`;
   } else if (incident.status === 'verified') {
@@ -280,14 +270,14 @@ function showSidePanel(incidentId) {
     html += `<p style="margin-top:4px;">Status: <span style="color:red;">Unverified</span></p>`;
   }
 
-  // Photos (multiple)
+  // multiple photos
   if (incident.photoURLs && incident.photoURLs.length > 0) {
     incident.photoURLs.forEach((src) => {
       html += `<img src="${src}" alt="Incident Photo"/>`;
     });
   }
 
-  // Like & Share
+  // like & share
   html += `<div class="like-share-row">
              <button class="btn btn-outline-secondary btn-sm" onclick="likeIncident(${incident.id})">
                <i class="fa-regular fa-thumbs-up"></i> (${incident.likes})
@@ -297,7 +287,7 @@ function showSidePanel(incidentId) {
              </button>
            </div>`;
 
-  // Verification row
+  // verify row
   if (incident.status === 'pending') {
     html += `<div class="verify-row">
                <button class="btn btn-sm btn-success" onclick="verifyIncident(${incident.id}, true)">Verify</button>
@@ -306,8 +296,6 @@ function showSidePanel(incidentId) {
   }
 
   document.getElementById('panel-content').innerHTML = html;
-
-  // show panel
   const panel = document.getElementById('side-panel');
   panel.classList.remove('panel-closed');
   panel.classList.add('panel-open');
@@ -341,13 +329,11 @@ function verifyIncident(incId, isVerified) {
   }
   updateContributorBadge();
 
-  // thresholds
   if (inc.verifiedCount >= 3) {
     inc.status = 'verified';
   } else if (inc.flaggedCount >= 2) {
     inc.status = 'unverified';
   }
-
   showSidePanel(incId);
 }
 
@@ -377,7 +363,7 @@ function updateHeatmap() {
  * SHARE MODAL
  ***********************/
 function openShareModal(incId) {
-  shareIncidentId = incId; 
+  shareIncidentId = incId;
   const modal = new bootstrap.Modal(document.getElementById('shareModal'), {});
   modal.show();
 }
@@ -385,14 +371,14 @@ function openShareModal(incId) {
 function shareInstagram() {
   const inc = incidents.find((i) => i.id === shareIncidentId);
   if (!inc) return;
-  const shareText = `I just reported an incident on THIS website! Location: ${inc.lat}, ${inc.lng}.`;
+  const shareText = `I just reported an incident! Location: ${inc.lat}, ${inc.lng}.`;
   window.open(`https://www.instagram.com/?text=${encodeURIComponent(shareText)}`, '_blank');
 }
 
 function shareFacebook() {
   const inc = incidents.find((i) => i.id === shareIncidentId);
   if (!inc) return;
-  const shareText = `I just reported an incident on THIS website! Location: ${inc.lat}, ${inc.lng}.`;
+  const shareText = `I just reported an incident! Location: ${inc.lat}, ${inc.lng}.`;
   const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareText)}`;
   window.open(fbUrl, '_blank');
 }
@@ -407,7 +393,7 @@ function shareSnapchat() {
 function shareWhatsapp() {
   const inc = incidents.find((i) => i.id === shareIncidentId);
   if (!inc) return;
-  const shareText = `I just reported an incident on THIS website! Location: ${inc.lat}, ${inc.lng}.`;
+  const shareText = `I just reported an incident! Location: ${inc.lat}, ${inc.lng}.`;
   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
   window.open(url, '_blank');
 }
@@ -415,7 +401,7 @@ function shareWhatsapp() {
 function shareTwitter() {
   const inc = incidents.find((i) => i.id === shareIncidentId);
   if (!inc) return;
-  const shareText = `I just reported an incident on THIS website! Location: ${inc.lat}, ${inc.lng}.`;
+  const shareText = `I just reported an incident! Location: ${inc.lat}, ${inc.lng}.`;
   const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
   window.open(url, '_blank');
 }
@@ -423,7 +409,7 @@ function shareTwitter() {
 function copyIncidentLink() {
   const inc = incidents.find((i) => i.id === shareIncidentId);
   if (!inc) return;
-  const linkText = `Incident on THIS website: ${inc.type} at [${inc.lat}, ${inc.lng}]`;
+  const linkText = `Incident: ${inc.type} at [${inc.lat}, ${inc.lng}]`;
   navigator.clipboard.writeText(linkText).then(() => {
     alert('Incident link copied!');
   });
@@ -465,7 +451,6 @@ function formatMonthKey(mKey) {
 function loadStatisticsData() {
   const dateVal = document.getElementById('date-filter').value;
   if (!dateVal || !incidentsData[dateVal]) {
-    // Clear chart + list
     if (lineChart) lineChart.destroy();
     document.getElementById('incident-list').innerHTML = '';
     return;
@@ -485,7 +470,6 @@ function loadStatisticsData() {
   });
   document.getElementById('incident-list').innerHTML = listHTML;
 
-  // build/update line chart
   if (lineChart) lineChart.destroy();
   const ctx = document.getElementById('line-chart').getContext('2d');
   lineChart = new Chart(ctx, {

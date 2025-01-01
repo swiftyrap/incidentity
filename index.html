@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Mobile-friendly meta -->
+  <!-- Mobile-friendly meta with viewport-fit=cover for Safari consistency -->
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
-  <title>Incident Reporting Demo - v14.06</title>
+  <title>Incident Reporting Demo - v14.07</title>
 
   <!-- Leaflet CSS -->
   <link
@@ -44,27 +44,26 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- TOP PANEL -->
+  <!-- TOP PANEL (slightly taller) -->
   <header id="top-panel" class="d-flex justify-content-between align-items-center">
+    <!-- LEFT: MAP & STATISTICS -->
     <div id="top-left-section" class="d-flex align-items-center gap-3">
-      <!-- MAP TAB -->
       <div id="map-tab" class="tab-btn active" title="Map">
         <i class="fa-solid fa-map"></i> Map
       </div>
-      <!-- STATS TAB -->
       <div id="stats-tab" class="tab-btn" title="Statistics">
         <i class="fa-solid fa-chart-line"></i> Statistics
       </div>
     </div>
 
-    <!-- REPORT INCIDENT IN THE CENTER -->
+    <!-- CENTER: REPORT -->
     <div id="report-center-section">
       <button id="report-btn" class="btn btn-primary btn-sm">
         <i class="fa-solid fa-exclamation-triangle"></i> Report
       </button>
     </div>
 
-    <!-- RIGHT SIDE: Search, Dark Mode, Account -->
+    <!-- RIGHT: SEARCH, THEME, MENU -->
     <div id="top-right-section" class="d-flex align-items-center gap-2">
       <!-- Search bar -->
       <div id="search-section" class="input-group input-group-sm">
@@ -85,30 +84,43 @@
         <i class="fa-solid fa-adjust"></i>
       </button>
 
-      <!-- Account button -->
-      <button id="account-btn" class="btn btn-outline-secondary btn-sm" type="button">
-        <i class="fa-solid fa-user"></i>
-      </button>
+      <!-- Menu button -->
+      <div class="dropdown">
+        <button
+          class="btn btn-outline-secondary btn-sm dropdown-toggle"
+          type="button"
+          id="menuBtn"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menuBtn">
+          <li><a class="dropdown-item" href="#" id="account-btn">Account</a></li>
+          <li><a class="dropdown-item" href="#">Settings</a></li>
+          <li><a class="dropdown-item" href="#">Help</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="#">About</a></li>
+        </ul>
+      </div>
     </div>
   </header>
 
-  <!-- MAP CONTAINER (Full Screen under top panel) -->
+  <!-- MAP CONTAINER (with some bottom space) -->
   <div id="map-container">
     <div id="map"></div>
-    <!-- TOP-RIGHT MAP OVERLAY FOR VERSION + ZOOM (Leaflet automatically places zoom if configured) -->
-    <div id="map-version-overlay">v14.06</div>
+    <!-- VERSION OVERLAY (above zoom) -->
+    <div id="map-version-overlay">v14.07</div>
   </div>
 
   <!-- STATS CONTAINER (hidden by default) -->
   <div id="stats-container">
-    <!-- 2-column layout: left => chart, right => incident list -->
     <div id="stats-topbar">
       <label for="date-filter" class="form-label">Select Date:</label>
       <select id="date-filter" class="form-select form-select-sm">
         <!-- Populated by JS -->
       </select>
     </div>
-
     <div id="stats-content" class="d-flex">
       <div id="chart-section">
         <div id="chart-wrapper">
@@ -246,7 +258,6 @@
         <div class="modal-body">
           <p>
             Manage your account information, notifications, membership, and more. 
-            Create a new account or login below.
           </p>
           <hr/>
           <!-- Example placeholder forms -->
