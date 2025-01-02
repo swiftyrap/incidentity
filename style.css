@@ -20,39 +20,22 @@ body {
 #top-panel {
   position: relative;
   width: 100%;
-  height: 60px; /* slightly taller than before (was 50) */
+  height: 60px;
   background: #fff;
   border-bottom: 1px solid #ccc;
   padding: 0 10px;
   z-index: 9999;
 }
 
-/* TABS (Map/Stats) => dark green highlight on .active */
-.tab-btn {
-  cursor: pointer;
-  color: #333;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background 0.2s;
-  font-weight: 500;
-}
-.tab-btn:hover {
-  background: #eaeaea;
-}
-.tab-btn.active {
-  background: #006400; /* dark green highlight */
-  color: #fff;
-}
-
 /***********************
  * MAP CONTAINER
  ***********************/
-/* Some bottom space => 20px so user sees margin at bottom on mobile */
 #map-container {
   position: relative;
   width: 100%;
-  height: calc(100% - 60px - 20px); 
-  margin-bottom: 20px; 
+  height: calc(100% - 60px); /* fill rest of viewport below top panel */
+  margin: 0;
+  padding: 0;
 }
 
 #map {
@@ -68,14 +51,15 @@ body {
   top: 10px;
   right: 10px;
   z-index: 9998;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.5); /* Reduced opacity for better transparency */
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 14px;
   color: #333;
+  pointer-events: none; /* Make it non-interactive */
 }
 
-/* Make sure the Leaflet zoom control is also at top right, below version number */
+/* single zoom => top right */
 .leaflet-control-zoom {
   position: absolute !important;
   top: 50px !important;
@@ -104,7 +88,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0.5rem 1rem 0;
+  padding: 0.75rem 1rem 0; /* increased top padding to ensure it's not covered */
 }
 
 #date-filter {
@@ -155,13 +139,13 @@ body {
   position: absolute;
   top: 60px; /* below top panel */
   left: 0;
-  width: 280px;
+  width: 300px; /* slightly bigger */
   height: calc(100% - 60px);
   background: #f4f4f4;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
   z-index: 9998;
   font-size: 0.85rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.25rem 0.5rem; /* Reduced padding */
   transform: translateX(-100%);
   transition: transform 0.3s ease;
   overflow: hidden; /* no scroll bar */
@@ -183,16 +167,18 @@ body {
 }
 
 #panel-content {
-  margin-top: 40px; /* space under close button */
+  margin-top: 35px; /* reduced space under close button */
+  padding: 0 8px; /* some horizontal padding */
 }
 
-/* Photo size a bit bigger */
+/* Photo fits width with the side padding and controlled height */
 #panel-content img {
   display: block;
-  max-width: 100%;
-  max-height: 180px;
+  width: 100%;
+  max-height: 200px; /* Controlled height */
+  height: auto;
   margin-bottom: 5px;
-  object-fit: cover;
+  object-fit: cover; 
 }
 
 .like-share-row {
@@ -223,18 +209,20 @@ body {
  * RESPONSIVE (SMALL SCREENS)
  ***********************/
 @media (max-width: 768px) {
-  #top-panel {
-    height: 70px; /* a bit more space for mobile logos */
-  }
   #map-container {
-    height: calc(100% - 70px - 20px);
+    height: calc(100% - 60px); /* no gap at bottom on mobile */
   }
+
+  #search-section {
+    width: 150px; /* bigger search bar in mobile */
+  }
+
   #side-panel {
-    width: 220px;
-    height: calc(100% - 70px);
+    width: 260px;
+    height: calc(100% - 60px);
   }
   #panel-content img {
-    max-height: 120px;
+    max-height: 180px; 
   }
   #chart-section {
     flex: 0 0 100%;

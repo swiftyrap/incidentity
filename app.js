@@ -21,6 +21,9 @@ let currentUser = {
 // For share incident ID
 let shareIncidentId = null;
 
+// Flag to ensure geolocation permission is requested only once
+let geolocationRequested = false;
+
 /***********************
  * DOMContentLoaded
  ***********************/
@@ -36,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initMap(center, zoom) {
   map = L.map('map', { zoomControl: false }).setView(center, zoom);
 
-  // Only 1 zoom button => top right
+  // single zoom => top right
   L.control.zoom({ position: 'topright' }).addTo(map);
 
   // OSM tile layer
@@ -47,7 +50,7 @@ function initMap(center, zoom) {
   // Add cluster group
   map.addLayer(markerClusterGroup);
 
-  // Heatmap layer
+  // Heat layer
   window.heat = L.heatLayer([], { radius: 25, blur: 15, maxZoom: 17 }).addTo(map);
 
   // user icon
@@ -60,7 +63,6 @@ function initMap(center, zoom) {
     })
   }).addTo(map);
 
-  // Hide side panel on map click
   map.on('click', () => {
     hideSidePanel();
   });
@@ -70,26 +72,33 @@ function initMap(center, zoom) {
  * INIT UI
  ***********************/
 function initUI() {
-  // Tabs
-  document.getElementById('map-tab').addEventListener('click', showMapTab);
-  document.getElementById('stats-tab').addEventListener('click', showStatsTab);
+  // MENU "Map" => show map container
+  document.getElementById('menu-map-btn').addEventListener('click', () => {
+    showMapTab();
+  });
+  // MENU "Stats" => show stats container
+  document.getElementById('menu-stats-btn').addEventListener('click', () => {
+    showStatsTab();
+  });
 
-  // Report button
+  // Report
   document.getElementById('report-btn').addEventListener('click', openReportModal);
 
   // Side panel close
   document.getElementById('panel-close-btn').addEventListener('click', hideSidePanel);
 
   // Submit incident
-  document.getElementById('modal-submit-btn').addEventListener('click', finalizeIncidentSubmission);
+  document
+    .getElementById('modal-submit-btn')
+    .addEventListener('click', finalizeIncidentSubmission);
 
-  // Account in the dropdown => show account modal
+  // Account
   document.getElementById('account-btn').addEventListener('click', () => {
     const modal = new bootstrap.Modal(document.getElementById('accountModal'), {});
     modal.show();
   });
 
-  // Account placeholder actions
+  // Register/Login placeholders
   document.getElementById('register-btn').addEventListener('click', () => {
     document.getElementById('account-message').textContent = 'Registration successful!';
     document.getElementById('account-message').style.display = 'block';
@@ -100,30 +109,20 @@ function initUI() {
   });
 
   // Search
-  document.getElementById('search-btn').addEventListener('click', async () => {
-    const query = document.getElementById('location-search').value;
-    if (!query) return;
+  const searchBtn = document.getElementById('search-btn');
+  const searchInput = document.getElementById('location-search');
 
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0];
-        map.setView([parseFloat(lat), parseFloat(lon)], 13);
-      } else {
-        alert('Location not found.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error searching location.');
+  searchBtn.addEventListener('click', handleSearch);
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   });
 
   // Theme toggle
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
-  // Share modal buttons
+  // Share buttons
   document.getElementById('share-instagram').addEventListener('click', () => shareInstagram());
   document.getElementById('share-facebook').addEventListener('click', () => shareFacebook());
   document.getElementById('share-snapchat').addEventListener('click', () => shareSnapchat());
@@ -133,27 +132,49 @@ function initUI() {
 }
 
 /***********************
- * TABS
+ * HANDLE SEARCH
+ ***********************/
+function handleSearch() {
+  const query = document.getElementById('location-search').value;
+  if (!query) return;
+
+  performSearch(query);
+}
+
+/***********************
+ * PERFORM SEARCH
+ ***********************/
+async function performSearch(query) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      query
+    )}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data && data.length > 0) {
+      const { lat, lon } = data[0];
+      map.setView([parseFloat(lat), parseFloat(lon)], 13);
+    } else {
+      alert('Location not found.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error searching location.');
+  }
+}
+
+/***********************
+ * SHOW/HIDE TABS
  ***********************/
 function showMapTab() {
-  // highlight Map
-  document.getElementById('map-tab').classList.add('active');
-  document.getElementById('stats-tab').classList.remove('active');
-
   document.getElementById('map-container').style.display = 'block';
   document.getElementById('stats-container').style.display = 'none';
-
   hideSidePanel();
 }
 
 function showStatsTab() {
-  // highlight Stats
-  document.getElementById('stats-tab').classList.add('active');
-  document.getElementById('map-tab').classList.remove('active');
-
   document.getElementById('map-container').style.display = 'none';
   document.getElementById('stats-container').style.display = 'block';
-
   hideSidePanel();
   buildDateFilter();
   loadStatisticsData();
@@ -167,6 +188,10 @@ function watchLocation() {
     console.warn('Geolocation not supported.');
     return;
   }
+
+  if (geolocationRequested) return;
+  geolocationRequested = true;
+
   navigator.geolocation.watchPosition(
     (pos) => {
       currentPosition = [pos.coords.latitude, pos.coords.longitude];
@@ -189,6 +214,13 @@ function openReportModal() {
 }
 
 function finalizeIncidentSubmission() {
+  const files = document.getElementById('photo-upload').files;
+  if (files.length === 0) {
+    alert('At least 1 photo is required.');
+    return;
+  }
+
+  // Close modal
   const modalEl = document.getElementById('reportModal');
   const modal = bootstrap.Modal.getInstance(modalEl);
   modal.hide();
@@ -199,9 +231,7 @@ function finalizeIncidentSubmission() {
   }
 
   const issueType = document.getElementById('issue-type').value;
-  const files = document.getElementById('photo-upload').files;
   const fileURLs = [];
-
   for (let f of files) {
     fileURLs.push(URL.createObjectURL(f));
   }
@@ -225,10 +255,9 @@ function finalizeIncidentSubmission() {
     likes: 0
   };
 
-  // push
   incidents.push(newIncident);
 
-  // stats data
+  // stats
   if (!incidentsData[monthKey]) {
     incidentsData[monthKey] = {};
   }
@@ -270,7 +299,7 @@ function showSidePanel(incidentId) {
     html += `<p style="margin-top:4px;">Status: <span style="color:red;">Unverified</span></p>`;
   }
 
-  // multiple photos
+  // photos
   if (incident.photoURLs && incident.photoURLs.length > 0) {
     incident.photoURLs.forEach((src) => {
       html += `<img src="${src}" alt="Incident Photo"/>`;
@@ -287,7 +316,7 @@ function showSidePanel(incidentId) {
              </button>
            </div>`;
 
-  // verify row
+  // verify
   if (incident.status === 'pending') {
     html += `<div class="verify-row">
                <button class="btn btn-sm btn-success" onclick="verifyIncident(${incident.id}, true)">Verify</button>
@@ -296,6 +325,7 @@ function showSidePanel(incidentId) {
   }
 
   document.getElementById('panel-content').innerHTML = html;
+
   const panel = document.getElementById('side-panel');
   panel.classList.remove('panel-closed');
   panel.classList.add('panel-open');
@@ -308,7 +338,7 @@ function hideSidePanel() {
 }
 
 /***********************
- * LIKE, VERIFY
+ * LIKE & VERIFY
  ***********************/
 function likeIncident(incId) {
   const inc = incidents.find((i) => i.id === incId);
@@ -436,6 +466,10 @@ function buildDateFilter() {
     opt.textContent = formatMonthKey(mKey);
     sel.appendChild(opt);
   });
+
+  // Add event listener for change
+  sel.removeEventListener('change', loadStatisticsData);
+  sel.addEventListener('change', loadStatisticsData);
 }
 
 function formatMonthKey(mKey) {
